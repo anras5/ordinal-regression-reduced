@@ -1,0 +1,6 @@
+jupyter
+pulp
+scikit-learn
+seaborn
+pandas
+hasse-diagram
