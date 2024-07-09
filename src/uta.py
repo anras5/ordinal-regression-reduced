@@ -1,6 +1,4 @@
-import csv
 from dataclasses import dataclass
-from itertools import islice
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -74,7 +72,7 @@ def _get_alternative_variables(
                     decision_variables[criterion_name][position - 1],
                     decision_variables[criterion_name][position]
                 )
-                coefficient = round((value-x1)/(x2-x1), 4)
+                coefficient = round((value - x1) / (x2 - x1), 4)
                 alt_variables.append(y1 + coefficient * (y2 - y1))
     return alt_variables
 
@@ -271,24 +269,3 @@ def extreme_ranking(
         df_extreme.loc[alt_1_id, BEST] += 1
 
     return df_extreme
-
-
-def read_csv(filepath: str, convert_to_gain: bool = True) -> (pd.DataFrame, List[Criterion]):
-    """
-    Reads a csv file and converts it into a pandas dataframe (performances) and criteria list.
-    """
-    df = pd.read_csv(filepath, skiprows=2, sep=';', index_col=0).astype(float)
-    types = [True if t.strip().startswith('g') else False
-             for t in next(islice(csv.reader(open('data/s2.csv')), 1, 2))[0].split(';') if t]
-    points = [int(p) for p in next(islice(csv.reader(open('data/s2.csv')), 0, 1))[0].split(';') if p]
-    criteria = [Criterion(name, _type, points) for name, _type, points in zip(df.columns, types, points)]
-
-    if convert_to_gain:
-        criteria_to_convert = filter(lambda x: not x.type, criteria)
-        for criterion in criteria_to_convert:
-            df[criterion.name] = df[criterion.name] * -1
-
-        for i in range(len(criteria)):
-            criteria[i].type = True
-
-    return df, criteria
