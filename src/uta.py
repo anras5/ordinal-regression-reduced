@@ -16,7 +16,7 @@ class Criterion:
     points: int = 0  # Number of characteristic points
 
 
-def minus_handler(value: float) -> str:
+def _minus_handler(value: float) -> str:
     return "_" + str(value)[1:] if value < 0 else value
 
 
@@ -47,12 +47,12 @@ def _get_alternative_variables(
             # If the criterion is general, we just add the variable that represents the value of alt_1 on this criterion
             alt_variables.append(
                 next((variable for variable in decision_variables[criterion_name]
-                      if str(variable) == f"u#{criterion_name}#{minus_handler(value)}"), None)
+                      if str(variable) == f"u#{criterion_name}#{_minus_handler(value)}"), None)
             )
         else:
             # Check if the value is in characteristic points
             check_variable = next((variable for variable in decision_variables[criterion_name]
-                                   if str(variable) == f"u#{criterion_name}#{minus_handler(round(value, 4))}"), None)
+                                   if str(variable) == f"u#{criterion_name}#{_minus_handler(round(value, 4))}"), None)
             if check_variable is not None:
                 alt_variables.append(check_variable)
             else:
@@ -60,10 +60,10 @@ def _get_alternative_variables(
                 # we need to add a variable calculated using linear interpolation
                 # Get all values of characteristic points for this criterion (X axis)
                 x_values = np.array(
-                    list(map(
+                    sorted(list(map(
                         lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
                         [str(variable).split("#")[-1] for variable in decision_variables[criterion_name]]
-                    ))
+                    )))
                 )
                 # Get the interval that the alternatives belongs to
                 position = np.searchsorted(x_values, value)
@@ -161,7 +161,8 @@ def _get_uta_problem(
     return problem, decision_variables, epsilon
 
 
-def uta_gms(df: pd.DataFrame, preferences: List[Tuple[Union[str, int]]], criteria: List[Criterion]) -> pd.DataFrame:
+def calculate_uta_gms(df: pd.DataFrame, preferences: List[Tuple[Union[str, int]]],
+                      criteria: List[Criterion]) -> pd.DataFrame:
     """
     Calculate UTA-GMS necessary relations based on provided data.
 
@@ -215,7 +216,7 @@ def uta_gms(df: pd.DataFrame, preferences: List[Tuple[Union[str, int]]], criteri
     return df_relations
 
 
-def extreme_ranking(
+def calculate_extreme_ranking(
         df: pd.DataFrame,
         preferences: List[Tuple[Union[str, int]]],
         criteria: List[Criterion]
