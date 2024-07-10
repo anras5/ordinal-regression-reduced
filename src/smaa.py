@@ -195,5 +195,46 @@ def calculate_pwi(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
     return df_pwi
 
 
-def calculate_rai(df: pd.DataFrame, samples: pd.DataFrame) -> pd.DataFrame:
-    pass
+def calculate_rai(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate Rank Acceptability Indices.
+
+    Parameters
+    ----------
+    - df (pd.DataFrame): Performance table of the alternatives.
+    - df_samples (pd.DataFrame): Samples tables. Rows are samples, columns are decision variables, values are values of the decision variables on marginal functions.
+
+    Returns
+    -------
+    - pd.DataFrame: Rank Acceptability Indices
+    """
+
+    df_rai = pd.DataFrame(0, index=df.index, columns=range(1, len(df.index) + 1))
+
+    # Calculate criteria abscissa
+    criteria_abscissa = {criterion_name: [] for criterion_name in df.columns}
+    for criterion_name in criteria_abscissa.keys():
+        criterion_decision_variables = [name for name in df_samples.columns if name.startswith(f'u#{criterion_name}#')]
+        criteria_abscissa[criterion_name] = np.array(
+            sorted(list(map(
+                lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
+                [str(variable).split("#")[-1] for variable in criterion_decision_variables]
+            )))
+        )
+
+    # Calculate RAI
+    for sample_id in df_samples.index:
+        utilities = {
+            alt_id: _get_alternative_utility(
+                df.loc[alt_id].to_dict(),
+                df_samples.loc[sample_id].to_dict(),
+                criteria_abscissa
+            )
+            for alt_id in df.index
+        }
+        utilities_sorted = sorted(utilities.items(), key=lambda x: -x[1])
+        for i, utility in enumerate(utilities_sorted, start=1):
+            df_rai.loc[utility[0], i] += 1
+
+    df_rai = df_rai / len(df_samples)
+    return df_rai
