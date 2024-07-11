@@ -9,6 +9,10 @@ from pulp import LpMaximize
 from uta import Criterion, _get_uta_problem, _minus_handler
 
 
+class SamplerException(Exception):
+    pass
+
+
 def calculate_samples(
         df: pd.DataFrame,
         preferences: List[Tuple[Union[str, int]]],
@@ -98,8 +102,7 @@ def calculate_samples(
         error_file.seek(0)
         error = error_file.read()
         if error:
-            print(error)
-            return None
+            raise SamplerException(error)
         else:
             output_file.seek(0)
             samples = []
