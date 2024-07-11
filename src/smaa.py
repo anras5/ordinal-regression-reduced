@@ -39,10 +39,11 @@ def calculate_samples(
         df,
         preferences,
         criteria,
-        "uta-gms",
+        "smaa",
         LpMaximize
     )
     problem += epsilon
+    # print(problem)
 
     all_variables = {str(variable): i for i, variable in enumerate(problem.variables())}
     constraints = problem.constraints.copy()
@@ -91,10 +92,22 @@ def calculate_samples(
         input_file.write(" ".join(map(str, constraint)) + "\n")
 
         input_file.seek(0)
+        # print("Input to the sampler:")
+        # for line in input_file:
+        #     print(line, end="")
+
+        input_file.seek(0)
         error_file.seek(0)
         subprocess.call(
-            ['java', '-jar', "/app/polyrun-1.1.0-jar-with-dependencies.jar", '-n', str(number_of_samples), '-s',
-             str(seed)],
+            [
+                'java',
+                '-jar',
+                "/app/polyrun-1.1.0-jar-with-dependencies.jar",
+                '-n',
+                str(number_of_samples),
+                '-s',
+                str(seed)
+            ],
             stdin=input_file,
             stdout=output_file,
             stderr=error_file

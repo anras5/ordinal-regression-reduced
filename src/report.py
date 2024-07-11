@@ -44,7 +44,8 @@ def calculate_heuristics(
     # Calculate samples
     try:
         df_samples = smaa.calculate_samples(df, preferences, criteria, number_of_samples)
-    except smaa.SamplerException:
+    except smaa.SamplerException as e:
+        print(e)
         return f_nec, f_era, None, None
 
     # Calculate f_PWI
