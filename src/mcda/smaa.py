@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pulp import LpMaximize
 
-from uta import Criterion, _get_uta_problem, _minus_handler
+from .uta import Criterion, _get_uta_problem, _minus_handler
 
 
 class SamplerException(Exception):

@@ -1,16 +1,16 @@
 from typing import List, Tuple, Union
 
-import uta
-import smaa
-
 import numpy as np
 import pandas as pd
+
+from .smaa import calculate_samples, SamplerException, calculate_pwi, calculate_rai
+from .uta import Criterion, calculate_extreme_ranking, calculate_uta_gms
 
 
 def calculate_heuristics(
         df: pd.DataFrame,
         preferences: List[Tuple[Union[str, int]]],
-        criteria: List[uta.Criterion],
+        criteria: List[Criterion],
         number_of_samples: int = 1000
 ) -> Tuple[np.int64, np.float64, np.float64, np.float64]:
     """
@@ -33,29 +33,29 @@ def calculate_heuristics(
     """
 
     # Calculate f_NEC
-    df_utagms = uta.calculate_uta_gms(df, preferences, criteria)
+    df_utagms = calculate_uta_gms(df, preferences, criteria)
     np.fill_diagonal(df_utagms.values, 0)
     f_nec = df_utagms.sum().sum()
 
     # Calculate f_ERA
-    df_extreme = uta.calculate_extreme_ranking(df, preferences, criteria)
+    df_extreme = calculate_extreme_ranking(df, preferences, criteria)
     f_era = (df_extreme['worst'] - df_extreme['best']).mean()
 
     # Calculate samples
     try:
-        df_samples = smaa.calculate_samples(df, preferences, criteria, number_of_samples)
-    except smaa.SamplerException as e:
+        df_samples = calculate_samples(df, preferences, criteria, number_of_samples)
+    except SamplerException as e:
         print(e)
         return f_nec, f_era, None, None
 
     # Calculate f_PWI
-    df_pwi = smaa.calculate_pwi(df, df_samples)
+    df_pwi = calculate_pwi(df, df_samples)
     df_pwi_safe = np.where(df_pwi == 0, 1e-10, df_pwi)  # so there won't be a 0 passed to the log function
     df_f_pwi = (-df_pwi * np.log2(df_pwi_safe)).round(4).fillna(0.0)
     f_pwi = df_f_pwi.sum().sum() / (len(df_f_pwi) * (len(df_f_pwi) - 1))
 
     # Calculate f_RAI
-    df_rai = smaa.calculate_rai(df, df_samples)
+    df_rai = calculate_rai(df, df_samples)
     df_rai_safe = np.where(df_rai == 0, 1e-10, df_rai)
     df_f_rai = (-df_rai * np.log2(df_rai_safe)).round(4).fillna(0.0)
     f_rai = (df_f_rai.sum(axis=1) / len(df_f_rai)).sum()

@@ -4,7 +4,7 @@ from typing import List
 
 import pandas as pd
 
-from uta import Criterion
+from mcda.uta import Criterion
 
 
 def read_csv(filepath: str, convert_to_gain: bool = True) -> (pd.DataFrame, List[Criterion]):
