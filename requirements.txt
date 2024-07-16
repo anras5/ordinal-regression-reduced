@@ -3,4 +3,6 @@ pulp
 scikit-learn
 seaborn
 pandas
+numpy
+torch
 hasse-diagram
