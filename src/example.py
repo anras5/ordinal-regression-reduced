@@ -24,17 +24,17 @@ df_scaled = scaler.fit_transform(df)
 available_points = [2, 3, 4]
 n_components = [2, 3, 4]
 
-# results_original = defaultdict(dict)
-# for points in available_points:
-#     print(f"points: {points}, method: original")
-#     criteria = [Criterion(name, points=points) for name in df.columns]
-#     f_nec, f_era, f_pwi, f_rai = calculate_heuristics(df, PREFERENCES, criteria)
-#     results_original['original'][(f"points: {points}", 'f_nec')] = f_nec
-#     results_original['original'][(f"points: {points}", 'f_era')] = f_era
-#     results_original['original'][(f"points: {points}", 'f_pwi')] = f_pwi
-#     results_original['original'][(f"points: {points}", 'f_rai')] = f_rai
-# df_results_original = pd.DataFrame(results_original)
-# print(df_results_original)
+results_original = defaultdict(dict)
+for points in available_points:
+    print(f"points: {points}, method: original")
+    criteria = [Criterion(name, points=points) for name in df.columns]
+    f_nec, f_era, f_pwi, f_rai = calculate_heuristics(df, PREFERENCES, criteria)
+    results_original['original'][(f"points: {points}", 'f_nec')] = f_nec
+    results_original['original'][(f"points: {points}", 'f_era')] = f_era
+    results_original['original'][(f"points: {points}", 'f_pwi')] = f_pwi
+    results_original['original'][(f"points: {points}", 'f_rai')] = f_rai
+df_results_original = pd.DataFrame(results_original)
+print(df_results_original)
 
 results = defaultdict(dict)
 for points in available_points:
