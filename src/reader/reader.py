@@ -13,8 +13,8 @@ def read_csv(filepath: str, convert_to_gain: bool = True) -> (pd.DataFrame, List
     """
     df = pd.read_csv(filepath, skiprows=2, sep=';', index_col=0).astype(float)
     types = [True if t.strip().startswith('g') else False
-             for t in next(islice(csv.reader(open('data/s2.csv')), 1, 2))[0].split(';') if t]
-    points = [int(p) for p in next(islice(csv.reader(open('data/s2.csv')), 0, 1))[0].split(';') if p]
+             for t in next(islice(csv.reader(open(filepath)), 1, 2))[0].split(';') if t]
+    points = [int(p) for p in next(islice(csv.reader(open(filepath)), 0, 1))[0].split(';') if p]
     criteria = [Criterion(name, _type, points) for name, _type, points in zip(df.columns, types, points)]
 
     if convert_to_gain:
