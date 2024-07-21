@@ -79,7 +79,7 @@ def _get_alternative_variables(
 
 def _get_uta_problem(
         df: pd.DataFrame,
-        preferences: List[Tuple[Union[str, int]]],
+        preferences: List[Tuple[Union[str, int], Union[str, int]]],
         criteria: List[Criterion],
         name: str,
         direction: int
