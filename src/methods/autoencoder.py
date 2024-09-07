@@ -1,5 +1,4 @@
 import random
-import numpy as np
 
 import torch
 import torch.nn as nn
@@ -98,7 +97,6 @@ class AutoencoderModel:
         return decoded_data.numpy()
 
 
-# Example usage:
 if __name__ == "__main__":
     import numpy as np
 
