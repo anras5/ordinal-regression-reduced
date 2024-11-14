@@ -1,6 +1,6 @@
 import subprocess
 from tempfile import TemporaryFile
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Any
 
 import numpy as np
 import pandas as pd
@@ -127,7 +127,7 @@ def calculate_samples(
 def _get_alternative_utility(
         performances: Dict[Union[str, int], float],
         dv_values: Dict[str, float],
-        criteria_abscissa: Dict[Union[str, int], List[float]]
+        criteria_abscissa: Dict[Any, List[float]]
 ) -> float:
     """
     Calculates comprehensive utility for a particular alternative.
@@ -183,7 +183,7 @@ def calculate_pwi(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
     df_pwi = pd.DataFrame(0, index=df.index, columns=df.index)
 
     # Calculate criteria abscissa
-    criteria_abscissa = {str(criterion_name): [] for criterion_name in df.columns}
+    criteria_abscissa = {criterion_name: [] for criterion_name in df.columns}
     for criterion_name in criteria_abscissa.keys():
         criterion_decision_variables = [name for name in df_samples.columns if name.startswith(f'u#{criterion_name}#')]
         criteria_abscissa[criterion_name] = list(
@@ -227,7 +227,7 @@ def calculate_rai(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
     df_rai = pd.DataFrame(0, index=df.index, columns=range(1, len(df.index) + 1))
 
     # Calculate criteria abscissa
-    criteria_abscissa = {str(criterion_name): [] for criterion_name in df.columns}
+    criteria_abscissa = {criterion_name: [] for criterion_name in df.columns}
     for criterion_name in criteria_abscissa.keys():
         criterion_decision_variables = [name for name in df_samples.columns if name.startswith(f'u#{criterion_name}#')]
         criteria_abscissa[criterion_name] = list(

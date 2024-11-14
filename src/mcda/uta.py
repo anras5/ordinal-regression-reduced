@@ -218,7 +218,7 @@ def calculate_uta_gms(df: pd.DataFrame, preferences: List[Tuple[Union[str, int]]
 
 def calculate_extreme_ranking(
         df: pd.DataFrame,
-        preferences: List[Tuple[Union[str, int]]],
+        preferences: List[Tuple[Union[str, int], Union[str, int]]],
         criteria: List[Criterion]
 ) -> pd.DataFrame:
     alternatives = df.index
