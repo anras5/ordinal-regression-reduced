@@ -1,0 +1,8 @@
+;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;
+;cost;cost;cost;cost;cost;cost;cost;cost;cost;cost;cost;cost;cost;cost;cost;cost;
+;carcinogens;non_carcinogens;respiratory_inorganics;ionizing_radiation;ozone_depletion;respiratory_organics;aquatic_ecotoxicity;terrestrial_ecotoxicity;terrestial_acid_nutri;land_occupation;aquatic_acidification;aquatic_eutrophication;global_warming;non_renewable_energy;mineral_extraction;renewable_energy
+R2;36.6;49;1.66;13600;0.000105;0.263;113000;42800;16.2;52.5;6.12;0.608;1000;15300;297;2210
+R2-A-a;30.9;36.5;1.5;17800;0.000135;0.277;134000;25400;17.1;58;6.68;0.316;1160;18400;186;2630
+R2-A-b;24.4;28.1;1.15;16300;0.000127;0.228;102000;18200;14.3;49.9;5.4;0.214;1040;16600;129;2420
+R2-B-a;19.4;20.4;0.933;15200;0.000122;0.210;123000;16500;12.6;44.4;4.48;0.225;939;15300;178;2260
+R2-B-b;18.6;18.8;0.866;15000;0.000121;0.194;93700;13700;12.1;43.1;4.29;0.168;924;15000;125;2240

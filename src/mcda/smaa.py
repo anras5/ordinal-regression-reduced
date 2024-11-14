@@ -1,6 +1,6 @@
 import subprocess
 from tempfile import TemporaryFile
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Any
 
 import numpy as np
 import pandas as pd
@@ -14,11 +14,11 @@ class SamplerException(Exception):
 
 
 def calculate_samples(
-        df: pd.DataFrame,
-        preferences: List[Tuple[Union[str, int]]],
-        criteria: List[Criterion],
-        number_of_samples: int = 1000,
-        seed: int = 42
+    df: pd.DataFrame,
+    preferences: List[Tuple[Union[str, int]]],
+    criteria: List[Criterion],
+    number_of_samples: int = 1000,
+    seed: int = 42,
 ) -> pd.DataFrame:
     """
     Calculates samples using Polyrun sampler.
@@ -35,13 +35,7 @@ def calculate_samples(
     -------
     - pd.DataFrame: Dataframe with samples.
     """
-    problem, decision_variables, epsilon = _get_uta_problem(
-        df,
-        preferences,
-        criteria,
-        "smaa",
-        LpMaximize
-    )
+    problem, decision_variables, epsilon = _get_uta_problem(df, preferences, criteria, "smaa", LpMaximize)
     problem += epsilon
     # print(problem)
 
@@ -51,12 +45,11 @@ def calculate_samples(
     with TemporaryFile("w+") as input_file, TemporaryFile("w+") as output_file, TemporaryFile("w+") as error_file:
         # Standard constraints - worst/best bounds, monotonicity and preferences
         for c_name, c in constraints.items():
-
             c_dict = c.toDict()
-            c_variables = {coeff['name']: coeff['value'] for coeff in c_dict['coefficients']}
+            c_variables = {coeff["name"]: coeff["value"] for coeff in c_dict["coefficients"]}
 
             # Handle _C2 which is the hypothetical worst performance equal to 0 constraint separately
-            if c_name == '_C2':
+            if c_name == "_C2":
                 for variable in all_variables.keys():
                     if variable in c_variables.keys():
                         constraint = [0] * len(all_variables)
@@ -73,7 +66,7 @@ def calculate_samples(
                         constraint.append(0)
 
                 # choose appropriate sign
-                match c_dict['sense']:
+                match c_dict["sense"]:
                     case -1:
                         constraint.append("<=")
                     case 0:
@@ -82,7 +75,7 @@ def calculate_samples(
                         constraint.append(">=")
 
                 # add constant multiplied by -1 (because the value has to be on the right side of the constraint)
-                constraint.append(-c_dict['constant'])
+                constraint.append(-c_dict["constant"])
                 input_file.write(" ".join(map(str, constraint)) + "\n")
 
         # Add epsilon constraint
@@ -100,17 +93,17 @@ def calculate_samples(
         error_file.seek(0)
         subprocess.call(
             [
-                'java',
-                '-jar',
+                "java",
+                "-jar",
                 "/app/polyrun-1.1.0-jar-with-dependencies.jar",
-                '-n',
+                "-n",
                 str(number_of_samples),
-                '-s',
-                str(seed)
+                "-s",
+                str(seed),
             ],
             stdin=input_file,
             stdout=output_file,
-            stderr=error_file
+            stderr=error_file,
         )
         error_file.seek(0)
         error = error_file.read()
@@ -120,14 +113,14 @@ def calculate_samples(
             output_file.seek(0)
             samples = []
             for line in output_file:
-                samples.append([float(value) for value in line.split('\t')])
+                samples.append([float(value) for value in line.split("\t")])
             return pd.DataFrame(samples, columns=all_variables.keys())
 
 
 def _get_alternative_utility(
-        performances: Dict[Union[str, int], float],
-        dv_values: Dict[str, float],
-        criteria_abscissa: Dict[Union[str, int], List[float]]
+    performances: Dict[Union[str, int], float],
+    dv_values: Dict[str, float],
+    criteria_abscissa: Dict[Any, List[float]],
 ) -> float:
     """
     Calculates comprehensive utility for a particular alternative.
@@ -160,7 +153,7 @@ def _get_alternative_utility(
             x1, x2 = x_values[position - 1], x_values[position]
             y1, y2 = (
                 dv_values[f"u#{criterion_name}#{_minus_handler(x_values[position - 1])}"],
-                dv_values[f"u#{criterion_name}#{_minus_handler(x_values[position])}"]
+                dv_values[f"u#{criterion_name}#{_minus_handler(x_values[position])}"],
             )
             coefficient = round((value - x1) / (x2 - x1), 4)
             utility += y1 + coefficient * (y2 - y1)
@@ -185,12 +178,16 @@ def calculate_pwi(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
     # Calculate criteria abscissa
     criteria_abscissa = {criterion_name: [] for criterion_name in df.columns}
     for criterion_name in criteria_abscissa.keys():
-        criterion_decision_variables = [name for name in df_samples.columns if name.startswith(f'u#{criterion_name}#')]
-        criteria_abscissa[criterion_name] = np.array(
-            sorted(list(map(
-                lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
-                [str(variable).split("#")[-1] for variable in criterion_decision_variables]
-            )))
+        criterion_decision_variables = [name for name in df_samples.columns if name.startswith(f"u#{criterion_name}#")]
+        criteria_abscissa[criterion_name] = list(
+            sorted(
+                list(
+                    map(
+                        lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
+                        [str(variable).split("#")[-1] for variable in criterion_decision_variables],
+                    )
+                )
+            )
         )
 
     # Calculate PWI
@@ -199,14 +196,13 @@ def calculate_pwi(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
             alt_id: _get_alternative_utility(
                 df.loc[alt_id].to_dict(),
                 df_samples.loc[sample_id].to_dict(),
-                criteria_abscissa
+                criteria_abscissa,
             )
             for alt_id in df.index
         }
-        for alt_1_id in utilities.keys():
-            for alt_2_id in utilities.keys():
-                if utilities[alt_1_id] > utilities[alt_2_id]:
-                    df_pwi.loc[alt_1_id, alt_2_id] += 1
+        alternatives_sorted = list(map(lambda x: x[0], sorted(utilities.items(), key=lambda x: -x[1])))
+        for i, alt_id in enumerate(alternatives_sorted):
+            df_pwi.loc[alt_id, alternatives_sorted[i + 1 :]] += 1
     df_pwi = df_pwi / len(df_samples)
     return df_pwi
 
@@ -230,12 +226,16 @@ def calculate_rai(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
     # Calculate criteria abscissa
     criteria_abscissa = {criterion_name: [] for criterion_name in df.columns}
     for criterion_name in criteria_abscissa.keys():
-        criterion_decision_variables = [name for name in df_samples.columns if name.startswith(f'u#{criterion_name}#')]
-        criteria_abscissa[criterion_name] = np.array(
-            sorted(list(map(
-                lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
-                [str(variable).split("#")[-1] for variable in criterion_decision_variables]
-            )))
+        criterion_decision_variables = [name for name in df_samples.columns if name.startswith(f"u#{criterion_name}#")]
+        criteria_abscissa[criterion_name] = list(
+            sorted(
+                list(
+                    map(
+                        lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
+                        [str(variable).split("#")[-1] for variable in criterion_decision_variables],
+                    )
+                )
+            )
         )
 
     # Calculate RAI
@@ -244,7 +244,7 @@ def calculate_rai(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
             alt_id: _get_alternative_utility(
                 df.loc[alt_id].to_dict(),
                 df_samples.loc[sample_id].to_dict(),
-                criteria_abscissa
+                criteria_abscissa,
             )
             for alt_id in df.index
         }

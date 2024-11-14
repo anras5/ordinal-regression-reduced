@@ -1,6 +1,6 @@
 import random
-import numpy as np
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -23,7 +23,7 @@ class Autoencoder(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, input_dim)
+            nn.Linear(hidden_dim, input_dim),
         )
 
     def forward(self, x):
@@ -36,7 +36,15 @@ class Autoencoder(nn.Module):
 
 
 class AutoencoderModel:
-    def __init__(self, hidden_dim=64, encoded_dim=3, learning_rate=1e-3, epochs=50, batch_size=32, seed=42):
+    def __init__(
+        self,
+        hidden_dim=64,
+        encoded_dim=3,
+        learning_rate=1e-3,
+        epochs=50,
+        batch_size=32,
+        seed=42,
+    ):
         self.hidden_dim = hidden_dim
         self.encoded_dim = encoded_dim
         self.learning_rate = learning_rate
@@ -98,25 +106,28 @@ class AutoencoderModel:
         return decoded_data.numpy()
 
 
-# Example usage:
 if __name__ == "__main__":
     import numpy as np
 
     # Example data with 10 attributes
-    data = np.array([[-1.8342e+04, -3.0700e+01, -3.7200e+01, 2.3300e+00, 3.0000e+00],
-                     [-1.5335e+04, -3.0200e+01, -4.1600e+01, 2.0000e+00, 2.5000e+00],
-                     [-1.6973e+04, -2.9000e+01, -3.4900e+01, 2.6600e+00, 2.5000e+00],
-                     [-1.5460e+04, -3.0400e+01, -3.5800e+01, 1.6600e+00, 1.5000e+00],
-                     [-1.5131e+04, -2.9700e+01, -3.5600e+01, 1.6600e+00, 1.7500e+00],
-                     [-1.3841e+04, -3.0800e+01, -3.6500e+01, 1.3300e+00, 2.0000e+00],
-                     [-1.8971e+04, -2.8000e+01, -3.5600e+01, 2.3300e+00, 2.0000e+00],
-                     [-1.8319e+04, -2.8900e+01, -3.5300e+01, 1.6600e+00, 2.0000e+00],
-                     [-1.9800e+04, -2.9400e+01, -3.4700e+01, 2.0000e+00, 1.7500e+00],
-                     [-1.6966e+04, -3.0000e+01, -3.7700e+01, 2.3300e+00, 3.2500e+00],
-                     [-1.7537e+04, -2.8300e+01, -3.4800e+01, 2.3300e+00, 2.7500e+00],
-                     [-1.5980e+04, -2.9600e+01, -3.5300e+01, 2.3300e+00, 2.7500e+00],
-                     [-1.7219e+04, -3.0200e+01, -3.6900e+01, 1.6600e+00, 1.2500e+00],
-                     [-2.1334e+04, -2.8900e+01, -3.6700e+01, 2.0000e+00, 2.2500e+00]])
+    data = np.array(
+        [
+            [-1.8342e04, -3.0700e01, -3.7200e01, 2.3300e00, 3.0000e00],
+            [-1.5335e04, -3.0200e01, -4.1600e01, 2.0000e00, 2.5000e00],
+            [-1.6973e04, -2.9000e01, -3.4900e01, 2.6600e00, 2.5000e00],
+            [-1.5460e04, -3.0400e01, -3.5800e01, 1.6600e00, 1.5000e00],
+            [-1.5131e04, -2.9700e01, -3.5600e01, 1.6600e00, 1.7500e00],
+            [-1.3841e04, -3.0800e01, -3.6500e01, 1.3300e00, 2.0000e00],
+            [-1.8971e04, -2.8000e01, -3.5600e01, 2.3300e00, 2.0000e00],
+            [-1.8319e04, -2.8900e01, -3.5300e01, 1.6600e00, 2.0000e00],
+            [-1.9800e04, -2.9400e01, -3.4700e01, 2.0000e00, 1.7500e00],
+            [-1.6966e04, -3.0000e01, -3.7700e01, 2.3300e00, 3.2500e00],
+            [-1.7537e04, -2.8300e01, -3.4800e01, 2.3300e00, 2.7500e00],
+            [-1.5980e04, -2.9600e01, -3.5300e01, 2.3300e00, 2.7500e00],
+            [-1.7219e04, -3.0200e01, -3.6900e01, 1.6600e00, 1.2500e00],
+            [-2.1334e04, -2.8900e01, -3.6700e01, 2.0000e00, 2.2500e00],
+        ]
+    )
 
     scaler = StandardScaler()
     data = scaler.fit_transform(data)
