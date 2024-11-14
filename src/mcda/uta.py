@@ -6,7 +6,7 @@ import pandas as pd
 from pulp import GLPK, LpMaximize, LpMinimize, LpProblem, LpVariable, lpSum
 
 NECESSARY = 1
-BEST, WORST = 'best', 'worst'
+BEST, WORST = "best", "worst"
 
 
 @dataclass
@@ -21,9 +21,9 @@ def _minus_handler(value: float) -> str:
 
 
 def _get_alternative_variables(
-        performances: Dict[Union[str, int], float],
-        decision_variables: Dict[Union[str, int], List[LpVariable]],
-        criteria: List[Criterion]
+    performances: Dict[Union[str, int], float],
+    decision_variables: Dict[Union[str, int], List[LpVariable]],
+    criteria: List[Criterion],
 ) -> List[LpVariable]:
     """
     Calculates variables used in preference constraints for a given alternative.
@@ -70,7 +70,7 @@ def _get_alternative_variables(
                 x1, x2 = x_values[position - 1], x_values[position]
                 y1, y2 = (
                     decision_variables[criterion_name][position - 1],
-                    decision_variables[criterion_name][position]
+                    decision_variables[criterion_name][position],
                 )
                 coefficient = round((value - x1) / (x2 - x1), 4)
                 alt_variables.append(y1 + coefficient * (y2 - y1))
@@ -78,11 +78,11 @@ def _get_alternative_variables(
 
 
 def _get_uta_problem(
-        df: pd.DataFrame,
-        preferences: List[Tuple[Union[str, int], Union[str, int]]],
-        criteria: List[Criterion],
-        name: str,
-        direction: int
+    df: pd.DataFrame,
+    preferences: List[Tuple[Union[str, int], Union[str, int]]],
+    criteria: List[Criterion],
+    name: str,
+    direction: int,
 ) -> Tuple[LpProblem, Dict[str, List[LpVariable]], LpVariable]:
     """
     Utility function for creating a general problem for UTA. Creates a problem with constraints for:
@@ -146,23 +146,18 @@ def _get_uta_problem(
 
     # Preferences
     for preference in preferences:
-        alt_1_variables = _get_alternative_variables(
-            df.loc[preference[0]].to_dict(),
-            decision_variables,
-            criteria
-        )
-        alt_2_variables = _get_alternative_variables(
-            df.loc[preference[1]].to_dict(),
-            decision_variables,
-            criteria
-        )
+        alt_1_variables = _get_alternative_variables(df.loc[preference[0]].to_dict(), decision_variables, criteria)
+        alt_2_variables = _get_alternative_variables(df.loc[preference[1]].to_dict(), decision_variables, criteria)
         problem += lpSum(alt_1_variables) >= lpSum(alt_2_variables) + epsilon
 
     return problem, decision_variables, epsilon
 
 
-def calculate_uta_gms(df: pd.DataFrame, preferences: List[Tuple[Union[str, int]]],
-                      criteria: List[Criterion]) -> pd.DataFrame:
+def calculate_uta_gms(
+    df: pd.DataFrame,
+    preferences: List[Tuple[Union[str, int]]],
+    criteria: List[Criterion],
+) -> pd.DataFrame:
     """
     Calculate UTA-GMS necessary relations based on provided data.
 
@@ -185,30 +180,16 @@ def calculate_uta_gms(df: pd.DataFrame, preferences: List[Tuple[Union[str, int]]
                 continue
 
             # Testing necessary relation alt_1 > alt_2
-            problem, decision_variables, epsilon = _get_uta_problem(
-                df,
-                preferences,
-                criteria,
-                "uta-gms",
-                LpMaximize
-            )
+            problem, decision_variables, epsilon = _get_uta_problem(df, preferences, criteria, "uta-gms", LpMaximize)
 
             # Necessary relation constraint
-            alt_1_variables = _get_alternative_variables(
-                df.loc[alt_1_id].to_dict(),
-                decision_variables,
-                criteria
-            )
-            alt_2_variables = _get_alternative_variables(
-                df.loc[alt_2_id].to_dict(),
-                decision_variables,
-                criteria
-            )
+            alt_1_variables = _get_alternative_variables(df.loc[alt_1_id].to_dict(), decision_variables, criteria)
+            alt_2_variables = _get_alternative_variables(df.loc[alt_2_id].to_dict(), decision_variables, criteria)
             problem += lpSum(alt_2_variables) >= lpSum(alt_1_variables) + epsilon
             problem += epsilon
             problem.solve(solver=GLPK(msg=False))
             solution = {variable.name: variable.varValue for variable in problem.variables()}
-            epsilon_value = solution['epsilon']
+            epsilon_value = solution["epsilon"]
             if epsilon_value <= 0:
                 df_relations.loc[alt_1_id, alt_2_id] = NECESSARY
                 continue
@@ -217,21 +198,21 @@ def calculate_uta_gms(df: pd.DataFrame, preferences: List[Tuple[Union[str, int]]
 
 
 def calculate_extreme_ranking(
-        df: pd.DataFrame,
-        preferences: List[Tuple[Union[str, int], Union[str, int]]],
-        criteria: List[Criterion]
+    df: pd.DataFrame,
+    preferences: List[Tuple[Union[str, int], Union[str, int]]],
+    criteria: List[Criterion],
 ) -> pd.DataFrame:
     alternatives = df.index
-    df_extreme = pd.DataFrame([[0, len(alternatives)]] * len(alternatives), index=alternatives, columns=[BEST, WORST])
+    df_extreme = pd.DataFrame(
+        [[0, len(alternatives)]] * len(alternatives),
+        index=alternatives,
+        columns=[BEST, WORST],
+    )
     for alt_1_id in alternatives:
         for _type in [BEST, WORST]:
             # Best rank for alternative
             problem, decision_variables, epsilon = _get_uta_problem(
-                df,
-                preferences,
-                criteria,
-                "extreme-analysis",
-                LpMinimize
+                df, preferences, criteria, "extreme-analysis", LpMinimize
             )
             problem += epsilon == 0.0001
 
@@ -241,18 +222,10 @@ def calculate_extreme_ranking(
                 if alt_1_id == alt_2_id:
                     continue
 
-                alt_1_variables = _get_alternative_variables(
-                    df.loc[alt_1_id].to_dict(),
-                    decision_variables,
-                    criteria
-                )
-                alt_2_variables = _get_alternative_variables(
-                    df.loc[alt_2_id].to_dict(),
-                    decision_variables,
-                    criteria
-                )
+                alt_1_variables = _get_alternative_variables(df.loc[alt_1_id].to_dict(), decision_variables, criteria)
+                alt_2_variables = _get_alternative_variables(df.loc[alt_2_id].to_dict(), decision_variables, criteria)
 
-                variable_rank = LpVariable(f"r_{alt_2_id}", cat='Binary')
+                variable_rank = LpVariable(f"r_{alt_2_id}", cat="Binary")
                 binary_variables_rank[f"r_{alt_2_id}"] = variable_rank
                 if _type == BEST:
                     problem += lpSum(alt_1_variables) >= lpSum(alt_2_variables) - M * variable_rank
@@ -262,7 +235,7 @@ def calculate_extreme_ranking(
             problem += lpSum(binary_variables_rank.values())
             problem.solve(solver=GLPK(msg=False))
             for variable in problem.variables():
-                if variable.name.startswith('r_') and variable.varValue == 1:
+                if variable.name.startswith("r_") and variable.varValue == 1:
                     if _type == BEST:
                         df_extreme.loc[alt_1_id, BEST] += 1
                     if _type == WORST:

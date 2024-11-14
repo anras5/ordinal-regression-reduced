@@ -8,10 +8,10 @@ from .uta import Criterion, calculate_extreme_ranking, calculate_uta_gms
 
 
 def calculate_heuristics(
-        df: pd.DataFrame,
-        preferences: List[Tuple[Union[str, int]]],
-        criteria: List[Criterion],
-        number_of_samples: int = 1000
+    df: pd.DataFrame,
+    preferences: List[Tuple[Union[str, int]]],
+    criteria: List[Criterion],
+    number_of_samples: int = 1000,
 ) -> Tuple[np.int64, np.float64, np.float64, np.float64]:
     """
     Calculates heuristics for provided dataset and preferences.
@@ -39,7 +39,7 @@ def calculate_heuristics(
 
     # Calculate f_ERA
     df_extreme = calculate_extreme_ranking(df, preferences, criteria)
-    f_era = (df_extreme['worst'] - df_extreme['best']).mean()
+    f_era = (df_extreme["worst"] - df_extreme["best"]).mean()
 
     # Calculate samples
     try:
