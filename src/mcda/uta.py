@@ -1,5 +1,6 @@
-from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
+
+from .dataset import Criterion
 
 import numpy as np
 import pandas as pd
@@ -7,13 +8,6 @@ from pulp import GLPK, LpMaximize, LpMinimize, LpProblem, LpVariable, lpSum
 
 NECESSARY = 1
 BEST, WORST = "best", "worst"
-
-
-@dataclass
-class Criterion:
-    name: str  # Name of the criterion
-    type: bool = True  # True=gain, False=cost
-    points: int = 0  # Number of characteristic points
 
 
 def _minus_handler(value: float) -> str:
@@ -46,13 +40,25 @@ def _get_alternative_variables(
         if criterion.points == 0:
             # If the criterion is general, we just add the variable that represents the value of alt_1 on this criterion
             alt_variables.append(
-                next((variable for variable in decision_variables[criterion_name]
-                      if str(variable) == f"u#{criterion_name}#{_minus_handler(value)}"), None)
+                next(
+                    (
+                        variable
+                        for variable in decision_variables[criterion_name]
+                        if str(variable) == f"u#{criterion_name}#{_minus_handler(value)}"
+                    ),
+                    None,
+                )
             )
         else:
             # Check if the value is in characteristic points
-            check_variable = next((variable for variable in decision_variables[criterion_name]
-                                   if str(variable) == f"u#{criterion_name}#{_minus_handler(round(value, 4))}"), None)
+            check_variable = next(
+                (
+                    variable
+                    for variable in decision_variables[criterion_name]
+                    if str(variable) == f"u#{criterion_name}#{_minus_handler(round(value, 4))}"
+                ),
+                None,
+            )
             if check_variable is not None:
                 alt_variables.append(check_variable)
             else:
@@ -60,10 +66,14 @@ def _get_alternative_variables(
                 # we need to add a variable calculated using linear interpolation
                 # Get all values of characteristic points for this criterion (X axis)
                 x_values = np.array(
-                    sorted(list(map(
-                        lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
-                        [str(variable).split("#")[-1] for variable in decision_variables[criterion_name]]
-                    )))
+                    sorted(
+                        list(
+                            map(
+                                lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
+                                [str(variable).split("#")[-1] for variable in decision_variables[criterion_name]],
+                            )
+                        )
+                    )
                 )
                 # Get the interval that the alternatives belongs to
                 position = np.searchsorted(x_values, value)
@@ -126,15 +136,25 @@ def _get_uta_problem(
 
     # Normalization
     # Hypothetical best utilities
-    problem += lpSum([
-        decision_variables[criterion.name][-1] if criterion.type else decision_variables[criterion.name][0]
-        for criterion in criteria
-    ]) == 1
+    problem += (
+        lpSum(
+            [
+                decision_variables[criterion.name][-1] if criterion.type else decision_variables[criterion.name][0]
+                for criterion in criteria
+            ]
+        )
+        == 1
+    )
     # Hypothetical worst utilities
-    problem += lpSum([
-        decision_variables[criterion.name][0] if criterion.type else decision_variables[criterion.name][-1]
-        for criterion in criteria
-    ]) == 0
+    problem += (
+        lpSum(
+            [
+                decision_variables[criterion.name][0] if criterion.type else decision_variables[criterion.name][-1]
+                for criterion in criteria
+            ]
+        )
+        == 0
+    )
 
     # Monotonicity
     for criterion in criteria:
