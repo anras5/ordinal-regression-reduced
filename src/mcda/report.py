@@ -10,7 +10,7 @@ from .dataset import Criterion
 
 def calculate_heuristics(
     df: pd.DataFrame,
-    preferences: List[Tuple[Union[str, int]]],
+    preferences: List[Tuple[Union[str, int], Union[str, int]]],
     criteria: List[Criterion],
     number_of_samples: int = 1000,
 ) -> Tuple[np.int64, np.float64, np.float64, np.float64]:

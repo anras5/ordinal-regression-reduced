@@ -15,7 +15,7 @@ class SamplerException(Exception):
 
 def calculate_samples(
     df: pd.DataFrame,
-    preferences: List[Tuple[Union[str, int]]],
+    preferences: List[Tuple[Union[str, int], Union[str, int]]],
     criteria: List[Criterion],
     number_of_samples: int = 1000,
     seed: int = 42,
@@ -176,19 +176,19 @@ def calculate_pwi(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
     df_pwi = pd.DataFrame(0, index=df.index, columns=df.index)
 
     # Calculate criteria abscissa
-    criteria_abscissa = {criterion_name: [] for criterion_name in df.columns}
-    for criterion_name in criteria_abscissa.keys():
-        criterion_decision_variables = [name for name in df_samples.columns if name.startswith(f"u#{criterion_name}#")]
-        criteria_abscissa[criterion_name] = list(
+    criteria_abscissa = {
+        criterion_name: list(
             sorted(
-                list(
-                    map(
-                        lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
-                        [str(variable).split("#")[-1] for variable in criterion_decision_variables],
-                    )
+                -1 * float(x[1:]) if x.startswith("_") else float(x)
+                for x in (
+                    variable.split("#")[-1]
+                    for variable in df_samples.columns
+                    if variable.startswith(f"u#{criterion_name}#")
                 )
             )
         )
+        for criterion_name in df.columns
+    }
 
     # Calculate PWI
     for sample_id in df_samples.index:
@@ -224,19 +224,19 @@ def calculate_rai(df: pd.DataFrame, df_samples: pd.DataFrame) -> pd.DataFrame:
     df_rai = pd.DataFrame(0, index=df.index, columns=range(1, len(df.index) + 1))
 
     # Calculate criteria abscissa
-    criteria_abscissa = {criterion_name: [] for criterion_name in df.columns}
-    for criterion_name in criteria_abscissa.keys():
-        criterion_decision_variables = [name for name in df_samples.columns if name.startswith(f"u#{criterion_name}#")]
-        criteria_abscissa[criterion_name] = list(
+    criteria_abscissa = {
+        criterion_name: list(
             sorted(
-                list(
-                    map(
-                        lambda x: -1 * float(x[1:]) if x.startswith("_") else float(x),
-                        [str(variable).split("#")[-1] for variable in criterion_decision_variables],
-                    )
+                -1 * float(x[1:]) if x.startswith("_") else float(x)
+                for x in (
+                    variable.split("#")[-1]
+                    for variable in df_samples.columns
+                    if variable.startswith(f"u#{criterion_name}#")
                 )
             )
         )
+        for criterion_name in df.columns
+    }
 
     # Calculate RAI
     for sample_id in df_samples.index:
