@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from pulp import GLPK, LpMaximize, LpMinimize, LpProblem, LpVariable, lpSum
 
+from .rounding import round_problem
+
 NECESSARY = 1
 BEST, WORST = "best", "worst"
 
@@ -207,6 +209,7 @@ def calculate_uta_gms(
             alt_2_variables = _get_alternative_variables(df.loc[alt_2_id].to_dict(), decision_variables, criteria)
             problem += lpSum(alt_2_variables) >= lpSum(alt_1_variables) + epsilon
             problem += epsilon
+            problem = round_problem(problem)
             problem.solve(solver=GLPK(msg=False))
             solution = {variable.name: variable.varValue for variable in problem.variables()}
             epsilon_value = solution["epsilon"]
@@ -253,6 +256,7 @@ def calculate_extreme_ranking(
                     problem += lpSum(alt_2_variables) >= lpSum(alt_1_variables) + epsilon - M * variable_rank
 
             problem += lpSum(binary_variables_rank.values())
+            problem = round_problem(problem)
             problem.solve(solver=GLPK(msg=False))
             for variable in problem.variables():
                 if variable.name.startswith("r_") and variable.varValue == 1:
