@@ -3,6 +3,7 @@ name = "uta-gms-reduced"
 version = "0.1.0"
 description = "Dimensionally reduced robust and stochastic ordinal regression."
 readme = "README.md"
+dependencies = []
 
 [tool.ruff]
 line-length = 120

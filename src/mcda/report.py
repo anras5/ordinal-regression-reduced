@@ -4,12 +4,13 @@ import numpy as np
 import pandas as pd
 
 from .smaa import calculate_samples, SamplerException, calculate_pwi, calculate_rai
-from .uta import Criterion, calculate_extreme_ranking, calculate_uta_gms
+from .uta import calculate_extreme_ranking, calculate_uta_gms
+from .dataset import Criterion
 
 
 def calculate_heuristics(
     df: pd.DataFrame,
-    preferences: List[Tuple[Union[str, int]]],
+    preferences: List[Tuple[Union[str, int], Union[str, int]]],
     criteria: List[Criterion],
     number_of_samples: int = 1000,
 ) -> Tuple[np.int64, np.float64, np.float64, np.float64]:
