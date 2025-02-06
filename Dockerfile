@@ -1,8 +1,12 @@
-FROM python:3.11
+FROM python:3.12
+LABEL author="Filip Marciniak"
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y default-jdk glpk-utils graphviz\
+RUN apt-get update && apt-get install -y \
+    default-jdk \
+    glpk-utils \
+    graphviz \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
