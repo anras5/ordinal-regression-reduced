@@ -1,5 +1,4 @@
 import argparse
-import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import List
@@ -7,16 +6,14 @@ from typing import List
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from sklearn.decomposition import PCA, KernelPCA
-from sklearn.manifold import TSNE, MDS, Isomap, SpectralEmbedding, LocallyLinearEmbedding
-from sklearn.preprocessing import StandardScaler
-from umap import UMAP
+from sklearn.decomposition import NMF, PCA, KernelPCA
+from sklearn.manifold import MDS, Isomap, LocallyLinearEmbedding
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 from mcda.dataset import MCDADataset
 from mcda.report import calculate_heuristics
 from mcda.uta import Criterion
-
-warnings.filterwarnings("ignore")
 
 
 def get_methods(n: int) -> dict:
@@ -33,14 +30,19 @@ def get_methods(n: int) -> dict:
 
     """
     return {
-        "PCA": PCA(n_components=n, random_state=42),
-        "KernelPCA": KernelPCA(n_components=n, random_state=42),
-        "t-SNE": TSNE(n_components=n, perplexity=10, method="exact", random_state=42),
-        "MDS": MDS(n_components=n, random_state=42),
-        "LLE": LocallyLinearEmbedding(n_components=n, random_state=42),
-        "Isomap": Isomap(n_components=n),
-        "SpectralEmbedding": SpectralEmbedding(n_components=n, random_state=42),
-        "UMAP": UMAP(n_components=n, random_state=42),
+        "PCA": Pipeline([("scaler", StandardScaler()), ("pca", PCA(n_components=n, random_state=42))]),
+        "KernelPCA": Pipeline([("scaler", StandardScaler()), ("kpca", KernelPCA(n_components=n, random_state=42))]),
+        "NMF": Pipeline(
+            [
+                ("shift_min", FunctionTransformer(lambda x: x + abs(x.min(axis=0)))),
+                ("nmf", NMF(n_components=n, random_state=42, max_iter=1000)),
+            ]
+        ),
+        "MDS": Pipeline([("scaler", StandardScaler()), ("mds", MDS(n_components=n, random_state=42))]),
+        "LLE": Pipeline(
+            [("scaler", StandardScaler()), ("lle", LocallyLinearEmbedding(n_components=n, random_state=42))]
+        ),
+        "Isomap": Pipeline([("scaler", StandardScaler()), ("isomap", Isomap(n_components=n))]),
     }
 
 
@@ -75,17 +77,13 @@ def get_domination_df(n_components: List[int], dataset: MCDADataset) -> pd.DataF
     pd.DataFrame: DataFrame with domination relations for each method and original dataset. Indices are tuples that can be passed to `preferences`.
     """
 
-    # Scaling data for methods
-    scaler = StandardScaler()
-    df_scaled = pd.DataFrame(scaler.fit_transform(dataset.data), columns=dataset.data.columns)
-
     domination = defaultdict(dict)
     for n in n_components:
         # check for each method
         methods = get_methods(n)
         for method_name, method in methods.items():
             df_m = (
-                pd.DataFrame(method.fit_transform(df_scaled), index=dataset.data.index, columns=range(n))
+                pd.DataFrame(method.fit_transform(dataset.data), index=dataset.data.index, columns=range(n))
                 .map(lambda x: f"{x:.4f}")
                 .astype(np.float64)
             )
@@ -110,27 +108,33 @@ def get_domination_df(n_components: List[int], dataset: MCDADataset) -> pd.DataF
     return df_domination[df_domination.eq(False).all(axis=1)]
 
 
-def process_preferences(preferences, n_components, df_scaled, available_points, output, _input, i):
+def process_preferences(preferences, n_components, df, available_points, output, _input, i):
     results = defaultdict(dict)
     for n in n_components:
         methods = get_methods(n)
         for method_name, method in methods.items():
             for points in available_points:
                 print(f"{i=} {n=} {method_name=} {points=}")
-                df_m = (
-                    pd.DataFrame(method.fit_transform(df_scaled), index=df_scaled.index, columns=range(n))
-                    .map(lambda x: f"{x:.4f}")
-                    .astype(np.float64)
-                )
-                criteria = [Criterion(name, points=points) for name in df_m.columns]
-                f_nec, f_era, f_pwi, f_rai = calculate_heuristics(df_m, preferences, criteria)
-                results[(method_name, f"dims: {n}")][(f"points: {points}", "f_nec")] = f_nec
-                results[(method_name, f"dims: {n}")][(f"points: {points}", "f_era")] = f_era
-                results[(method_name, f"dims: {n}")][(f"points: {points}", "f_pwi")] = f_pwi
-                results[(method_name, f"dims: {n}")][(f"points: {points}", "f_rai")] = f_rai
-                print(f"{i=} {n=} {method_name=} {points=} calculated!")
+                try:
+                    df_m = (
+                        pd.DataFrame(method.fit_transform(df), index=df.index, columns=range(n))
+                        .map(lambda x: f"{x:.4f}")
+                        .astype(np.float64)
+                    )
+                    criteria = [Criterion(name, points=points) for name in df_m.columns]
+                    f_nec, f_era, f_pwi, f_rai = calculate_heuristics(df_m, preferences, criteria)
+                    results[(method_name, f"dims: {n}")][(f"points: {points}", "f_nec")] = f_nec
+                    results[(method_name, f"dims: {n}")][(f"points: {points}", "f_era")] = f_era
+                    results[(method_name, f"dims: {n}")][(f"points: {points}", "f_pwi")] = f_pwi
+                    results[(method_name, f"dims: {n}")][(f"points: {points}", "f_rai")] = f_rai
+                except:
+                    results[(method_name, f"dims: {n}")][(f"points: {points}", "f_nec")] = None
+                    results[(method_name, f"dims: {n}")][(f"points: {points}", "f_era")] = None
+                    results[(method_name, f"dims: {n}")][(f"points: {points}", "f_pwi")] = None
+                    results[(method_name, f"dims: {n}")][(f"points: {points}", "f_rai")] = None
+                    print(f"{i=} {n=} {method_name=} {points=} failed!")
 
-    file_path = Path(f"./data/output/{_input.stem}_{len(preferences)}_{i}.csv")
+    file_path = output / Path(f"pref_{len(preferences)}_no_{i}.csv")
     df_results = pd.DataFrame(results)
     df_results = df_results.sort_index(axis=1, level=[0, 1])
     if file_path.exists():
@@ -155,11 +159,7 @@ if __name__ == "__main__":
 
     # Define the number of components
     available_points = [2, 3, 4, 5, 6]
-    n_components = [2, 3, 4, 5, 6]
-
-    # Scale the data
-    scaler = StandardScaler()
-    df_scaled = pd.DataFrame(scaler.fit_transform(dataset.data), columns=dataset.data.columns)
+    n_components = list(range(2, len(dataset.data.columns)//2 + 1))
 
     # Define possible preferences
     df_domination = get_domination_df(n_components, dataset)
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     # Calculate for each method
     Parallel(n_jobs=-3)(
         delayed(process_preferences)(
-            preferences, n_components, df_scaled, available_points, args.output_dir, args.input, i
+            preferences, n_components, dataset.data, available_points, args.output_dir, args.input, i
         )
         for i, preferences in enumerate(preferences_list)
     )
