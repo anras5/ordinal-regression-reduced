@@ -3,17 +3,20 @@ from collections import defaultdict
 from pathlib import Path
 from typing import List
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from joblib import Parallel, delayed
-from sklearn.decomposition import NMF, PCA, KernelPCA
-from sklearn.manifold import MDS, Isomap, LocallyLinearEmbedding
+from sklearn.decomposition import PCA, KernelPCA
+from sklearn.manifold import Isomap, LocallyLinearEmbedding
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
 from mcda.dataset import MCDADataset
 from mcda.report import calculate_heuristics
 from mcda.uta import Criterion
+from methods.mvu import MaximumVarianceUnfolding
 
 
 def get_methods(n: int) -> dict:
@@ -32,17 +35,11 @@ def get_methods(n: int) -> dict:
     return {
         "PCA": Pipeline([("scaler", StandardScaler()), ("pca", PCA(n_components=n, random_state=42))]),
         "KernelPCA": Pipeline([("scaler", StandardScaler()), ("kpca", KernelPCA(n_components=n, random_state=42))]),
-        "NMF": Pipeline(
-            [
-                ("shift_min", FunctionTransformer(lambda x: x + abs(x.min(axis=0)))),
-                ("nmf", NMF(n_components=n, random_state=42, max_iter=1000)),
-            ]
-        ),
-        "MDS": Pipeline([("scaler", StandardScaler()), ("mds", MDS(n_components=n, random_state=42))]),
         "LLE": Pipeline(
             [("scaler", StandardScaler()), ("lle", LocallyLinearEmbedding(n_components=n, random_state=42))]
         ),
         "Isomap": Pipeline([("scaler", StandardScaler()), ("isomap", Isomap(n_components=n))]),
+        "MVU": Pipeline([("scaler", StandardScaler()), ("mvu", MaximumVarianceUnfolding(n_components=n, seed=42))]),
     }
 
 
@@ -134,7 +131,7 @@ def process_preferences(preferences, n_components, df, available_points, output,
                     results[(method_name, f"dims: {n}")][(f"points: {points}", "f_rai")] = None
                     print(f"{i=} {n=} {method_name=} {points=} failed!")
 
-    file_path = output / Path(f"pref_{len(preferences)}_no_{i}.csv")
+    file_path = output / Path(f"no_{i}.csv")
     df_results = pd.DataFrame(results)
     df_results = df_results.sort_index(axis=1, level=[0, 1])
     if file_path.exists():
@@ -158,8 +155,9 @@ if __name__ == "__main__":
     dataset: MCDADataset = MCDADataset.read_csv(args.input)
 
     # Define the number of components
-    available_points = [2, 3, 4, 5, 6]
-    n_components = list(range(2, len(dataset.data.columns)//2 + 1))
+    available_points = [2, 5, 10]
+    # n_components = list(range(2, len(dataset.data.columns) // 2 + 2))
+    n_components = [2, 3, 4, 5, 6, 7]
 
     # Define possible preferences
     df_domination = get_domination_df(n_components, dataset)
@@ -189,3 +187,62 @@ if __name__ == "__main__":
         )
         for i, preferences in enumerate(preferences_list)
     )
+
+    # Create plots for the results
+    # Read data
+    df_list = []
+    for i in range(0, 10):
+        df_results = pd.read_csv(args.output_dir / Path(f"no_{i}.csv"), header=[0, 1],
+                                 index_col=[0, 1])
+        df_results.columns = pd.MultiIndex.from_tuples(
+            [(method, int(dim.split(": ")[1])) for method, dim in df_results.columns],
+            names=["method", "dim"],
+        )
+        df_results.index = pd.MultiIndex.from_tuples([(heu, int(p.split(": ")[1])) for p, heu in df_results.index])
+        df_list.append(df_results)
+    df_results = pd.concat(df_list)
+
+    # Line plots
+    unique_n_points = df_results.index.get_level_values(1).unique()
+    heuristics = df_results.index.get_level_values(0).unique()
+    methods = df_results.columns.get_level_values(0).unique()
+    X = "components"
+    COLOR = "points"
+    for method in methods:
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+        axes = axes.flatten()
+        for i, heuristic in enumerate(heuristics):
+            df_r = (
+                df_results[method]
+                .loc[heuristic]
+                .reset_index(names="points")
+                .melt(id_vars=["points"], var_name="components", value_name="value")
+            )
+            df_r.components = df_r.components.astype(np.float64)
+            sns.lineplot(x=X, y="value", hue=COLOR, data=df_r, ax=axes[i], palette="magma")
+            axes[i].set_xticks(df_r[X].unique())
+            axes[i].set_ylabel(heuristic)
+            handles, _ = axes[i].get_legend_handles_labels()
+            axes[i].legend(title=COLOR, handles=handles, loc="upper left", bbox_to_anchor=(1, 1), markerscale=5)
+        plt.suptitle(f"Heuristics for {method}", fontsize=20)
+        plt.tight_layout()
+        plt.savefig(args.output_dir / f"plots/lineplot/{method}.png")
+        plt.clf()
+
+    # Heat maps
+    unique_n_points = df_results.index.get_level_values(1).unique()
+    heuristics = df_results.index.get_level_values(0).unique()
+    methods = df_results.columns.get_level_values(0).unique()
+    for method in methods:
+        fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+        axes = axes.flatten()
+        for i, heuristic in enumerate(heuristics):
+            df_r = df_results[method].loc[heuristic].reset_index(names="points").groupby("points").agg("mean")
+            sns.heatmap(df_r, ax=axes[i], annot=True, fmt=".2f", cmap="crest")
+            axes[i].set_title(heuristic, fontsize=14)
+            axes[i].set_ylabel("points", fontsize=10)
+            axes[i].set_xlabel("components", fontsize=10)
+        plt.suptitle(f"Heuristics for {method}", fontsize=20)
+        plt.tight_layout()
+        plt.savefig(args.output_dir / f"plots/heatmap/{method}.png")
+        plt.clf()
