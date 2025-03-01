@@ -18,9 +18,17 @@ class DisconnectError(Exception):
 
 
 class MaximumVarianceUnfolding:
-
-    def __init__(self, n_components, equation="berkley", solver=cp.SCS, solver_tol=1e-2,
-                 eig_tol=1.0e-10, solver_iters=2500, warm_start=False, seed=None):
+    def __init__(
+        self,
+        n_components,
+        equation="berkley",
+        solver=cp.SCS,
+        solver_tol=1e-2,
+        eig_tol=1.0e-10,
+        solver_iters=2500,
+        warm_start=False,
+        seed=None,
+    ):
         """
         :param equation: A string either "berkley" or "wikipedia" to represent
                          two different equations for the same problem.
@@ -43,7 +51,7 @@ class MaximumVarianceUnfolding:
         self.seed = seed
         self.neighborhood_graph = None
 
-    def fit(self, data, k, dropout_rate=.2):
+    def fit(self, data, k, dropout_rate=0.2):
         """
         The method to fit an MVU model to the data.
 
@@ -68,7 +76,7 @@ class MaximumVarianceUnfolding:
         for i in range(n):
             for j in range(n):
                 if N[i, j] == 1 and np.random.random() < dropout_rate:
-                    N[i, j] = 0.
+                    N[i, j] = 0.0
 
         # Save the neighborhood graph to be accessed latter
         self.neighborhood_graph = N
@@ -78,9 +86,10 @@ class MaximumVarianceUnfolding:
         eigvals, _ = np.linalg.eig(lap)
 
         for e in eigvals:
-            if e == 0. and self.solver_iters is None:
-                raise DisconnectError("DISCONNECTED REGIONS IN NEIGHBORHOOD GRAPH. "
-                                      "PLEASE SPECIFY MAX ITERATIONS FOR THE SOLVER")
+            if e == 0.0 and self.solver_iters is None:
+                raise DisconnectError(
+                    "DISCONNECTED REGIONS IN NEIGHBORHOOD GRAPH. PLEASE SPECIFY MAX ITERATIONS FOR THE SOLVER"
+                )
 
         # Declare some CVXPy variables
         # Gramian of the original data
@@ -107,32 +116,31 @@ class MaximumVarianceUnfolding:
             for i in range(n):
                 for j in range(n):
                     if N[i, j] == 1:
-                        constraints.append((P[i, i] + P[j, j] - P[i, j] - P[j, i]) -
-                                           (Q[i, i] + Q[j, j] - Q[i, j] - Q[j, i]) == 0)
+                        constraints.append(
+                            (P[i, i] + P[j, j] - P[i, j] - P[j, i]) - (Q[i, i] + Q[j, j] - Q[i, j] - Q[j, i]) == 0
+                        )
 
         # UC Berkley Solution
         if self.equation == "berkley":
-            objective = cp.Maximize(cp.multiply((1 / T), cp.trace(Q)) -
-                                    cp.multiply((1 / (T * T)), cp.trace(cp.matmul(cp.matmul(Q, ONES), ONES.T))))
+            objective = cp.Maximize(
+                cp.multiply((1 / T), cp.trace(Q))
+                - cp.multiply((1 / (T * T)), cp.trace(cp.matmul(cp.matmul(Q, ONES), ONES.T)))
+            )
 
             constraints = [Q >> 0, cp.sum(Q, axis=1) == 0]
             for i in range(n):
                 for j in range(n):
-                    if N[i, j] == 1.:
-                        constraints.append(Q[i, i] - 2 * Q[i, j] + Q[j, j] -
-                                           (P[i, i] - 2 * P[i, j] + P[j, j]) == 0)
+                    if N[i, j] == 1.0:
+                        constraints.append(Q[i, i] - 2 * Q[i, j] + Q[j, j] - (P[i, i] - 2 * P[i, j] + P[j, j]) == 0)
 
         # Solve the problem with the SCS Solver
         problem = cp.Problem(objective, constraints)
         # FIXME The solvertol syntax is unique to SCS
-        problem.solve(solver=self.solver,
-                      eps=self.solver_tol,
-                      max_iters=self.solver_iters,
-                      warm_start=self.warm_start)
+        problem.solve(solver=self.solver, eps=self.solver_tol, max_iters=self.solver_iters, warm_start=self.warm_start)
 
         return Q.value
 
-    def fit_transform(self, data, dim=None, k=None, dropout_rate=.2):
+    def fit_transform(self, data, dim=None, k=None, dropout_rate=0.2):
         """
         The method to fit and transform an MVU model to the data.
 
@@ -158,7 +166,7 @@ class MaximumVarianceUnfolding:
         eigenvalues, eigenvectors = np.linalg.eig(embedded_gramian)
 
         # Set the eigenvalues that are within +/- eig_tol to 0
-        eigenvalues[np.logical_and(-self.eig_tol < eigenvalues, eigenvalues < self.eig_tol)] = 0.
+        eigenvalues[np.logical_and(-self.eig_tol < eigenvalues, eigenvalues < self.eig_tol)] = 0.0
 
         # Assuming the eigenvalues and eigenvectors aren't sorted,
         #    sort them and get the top "dim" ones
@@ -170,16 +178,24 @@ class MaximumVarianceUnfolding:
         top_eigenvectors = eigenvectors[:, top_eigenvalue_indices]
 
         # Some quick math to get the projection and return it
-        lbda = np.diag(top_eigenvalues ** 0.5)
+        lbda = np.diag(top_eigenvalues**0.5)
         embedded_data = lbda.dot(top_eigenvectors.T).T
 
         return embedded_data
 
 
 class LandmarkMaximumVarianceUnfolding:
-
-    def __init__(self, equation="berkley", landmarks=50, solver=cp.SCS, solver_tol=1e-2,
-                 eig_tol=1.0e-10, solver_iters=2500, warm_start=False, seed=None):
+    def __init__(
+        self,
+        equation="berkley",
+        landmarks=50,
+        solver=cp.SCS,
+        solver_tol=1e-2,
+        eig_tol=1.0e-10,
+        solver_iters=2500,
+        warm_start=False,
+        seed=None,
+    ):
         """
         :param equation: A string either "berkley" or "wikipedia" to represent
                          two different equations for the same problem.
@@ -225,7 +241,7 @@ class LandmarkMaximumVarianceUnfolding:
         num_connections = N.sum(axis=0).argsort()[::-1]
 
         # Separate the most popular points
-        top_landmarks_idxs = num_connections[:self.landmarks]
+        top_landmarks_idxs = num_connections[: self.landmarks]
         top_landmarks = data[top_landmarks_idxs, :]
 
         # Compute the nearest neighbors for all of the landmarks so they are all connected
@@ -246,14 +262,14 @@ class LandmarkMaximumVarianceUnfolding:
         # Add all of the intra-landmark connections to the neighborhood graph
         for i in range(self.landmarks):
             for j in range(self.landmarks):
-                if L[i, j] == 1.:
-                    N[top_landmarks_idxs[i], top_landmarks_idxs[j]] = 1.
+                if L[i, j] == 1.0:
+                    N[top_landmarks_idxs[i], top_landmarks_idxs[j]] = 1.0
 
         # Add all of the inter-landmark connections to the neighborhood graph
         for i in range(n - self.landmarks):
             for j in range(self.landmarks):
-                if l[i, j] == 1.:
-                    N[new_data_idxs[i], top_landmarks_idxs[j]] = 1.
+                if l[i, j] == 1.0:
+                    N[new_data_idxs[i], top_landmarks_idxs[j]] = 1.0
 
         # Save the neighborhood graph to be accessed latter
         self.neighborhood_graph = N
@@ -263,9 +279,10 @@ class LandmarkMaximumVarianceUnfolding:
         eigvals, _ = np.linalg.eig(lap)
 
         for e in eigvals:
-            if e == 0. and self.solver_iters is None:
-                raise DisconnectError("DISCONNECTED REGIONS IN NEIGHBORHOOD GRAPH. "
-                                      "PLEASE SPECIFY MAX ITERATIONS FOR THE SOLVER")
+            if e == 0.0 and self.solver_iters is None:
+                raise DisconnectError(
+                    "DISCONNECTED REGIONS IN NEIGHBORHOOD GRAPH. PLEASE SPECIFY MAX ITERATIONS FOR THE SOLVER"
+                )
 
         # Declare some CVXPy variables
         # Gramian of the original data
@@ -292,28 +309,27 @@ class LandmarkMaximumVarianceUnfolding:
             for i in range(n):
                 for j in range(n):
                     if N[i, j] == 1:
-                        constraints.append((P[i, i] + P[j, j] - P[i, j] - P[j, i]) -
-                                           (Q[i, i] + Q[j, j] - Q[i, j] - Q[j, i]) == 0)
+                        constraints.append(
+                            (P[i, i] + P[j, j] - P[i, j] - P[j, i]) - (Q[i, i] + Q[j, j] - Q[i, j] - Q[j, i]) == 0
+                        )
 
         # UC Berkley Solution
         if self.equation == "berkley":
-            objective = cp.Maximize(cp.multiply((1 / T), cp.trace(Q)) -
-                                    cp.multiply((1 / (T * T)), cp.trace(cp.matmul(cp.matmul(Q, ONES), ONES.T))))
+            objective = cp.Maximize(
+                cp.multiply((1 / T), cp.trace(Q))
+                - cp.multiply((1 / (T * T)), cp.trace(cp.matmul(cp.matmul(Q, ONES), ONES.T)))
+            )
 
             constraints = [Q >> 0, cp.sum(Q, axis=1) == 0]
             for i in range(n):
                 for j in range(n):
-                    if N[i, j] == 1.:
-                        constraints.append(Q[i, i] - 2 * Q[i, j] + Q[j, j] -
-                                           (P[i, i] - 2 * P[i, j] + P[j, j]) == 0)
+                    if N[i, j] == 1.0:
+                        constraints.append(Q[i, i] - 2 * Q[i, j] + Q[j, j] - (P[i, i] - 2 * P[i, j] + P[j, j]) == 0)
 
         # Solve the problem with the SCS Solver
         problem = cp.Problem(objective, constraints)
         # FIXME The solvertol syntax is unique to SCS
-        problem.solve(solver=self.solver,
-                      eps=self.solver_tol,
-                      max_iters=self.solver_iters,
-                      warm_start=self.warm_start)
+        problem.solve(solver=self.solver, eps=self.solver_tol, max_iters=self.solver_iters, warm_start=self.warm_start)
 
         return Q.value
 
@@ -336,7 +352,7 @@ class LandmarkMaximumVarianceUnfolding:
         eigenvalues, eigenvectors = np.linalg.eig(embedded_gramian)
 
         # Set the eigenvalues that are within +/- eig_tol to 0
-        eigenvalues[np.logical_and(-self.eig_tol < eigenvalues, eigenvalues < self.eig_tol)] = 0.
+        eigenvalues[np.logical_and(-self.eig_tol < eigenvalues, eigenvalues < self.eig_tol)] = 0.0
 
         # Assuming the eigenvalues and eigenvectors aren't sorted,
         #    sort them and get the top "dim" ones
@@ -348,7 +364,7 @@ class LandmarkMaximumVarianceUnfolding:
         top_eigenvectors = eigenvectors[:, top_eigenvalue_indices]
 
         # Some quick math to get the projection and return it
-        lbda = np.diag(top_eigenvalues ** 0.5)
+        lbda = np.diag(top_eigenvalues**0.5)
         embedded_data = lbda.dot(top_eigenvectors.T).T
 
         return embedded_data
