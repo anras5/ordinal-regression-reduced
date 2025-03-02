@@ -1,7 +1,7 @@
 import argparse
 from collections import defaultdict
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,9 +15,10 @@ from sklearn.preprocessing import StandardScaler
 
 from mcda.dataset import MCDADataset
 from mcda.report import calculate_heuristics
-from mcda.uta import Criterion
+from mcda.uta import Criterion, check_uta_feasibility
 from methods.mvu import MaximumVarianceUnfolding
 
+CORES = 10
 
 def get_methods(n: int) -> dict:
     """
@@ -60,14 +61,14 @@ def is_dominating(a_values: List[float], b_values: List[float]) -> bool:
     return all(a >= b for a, b in zip(a_values, b_values)) and any(a > b for a, b in zip(a_values, b_values))
 
 
-def get_domination_df(n_components: List[int], dataset: MCDADataset) -> pd.DataFrame:
+def get_domination_df(dataset: MCDADataset, n_components: List[int]) -> pd.DataFrame:
     """
     Get a DataFrame with domination relations for each method and original dataset.
 
     Parameters
     ----------
-    n_components (List[int]): List of number of components for methods
     dataset (MCDADataset): Dataset to check domination relations
+    n_components (List[int]): List of number of components for methods
 
     Returns
     -------
@@ -77,8 +78,7 @@ def get_domination_df(n_components: List[int], dataset: MCDADataset) -> pd.DataF
     domination = defaultdict(dict)
     for n in n_components:
         # check for each method
-        methods = get_methods(n)
-        for method_name, method in methods.items():
+        for method_name, method in get_methods(n).items():
             df_m = (
                 pd.DataFrame(method.fit_transform(dataset.data), index=dataset.data.index, columns=range(n))
                 .map(lambda x: f"{x:.4f}")
@@ -105,13 +105,61 @@ def get_domination_df(n_components: List[int], dataset: MCDADataset) -> pd.DataF
     return df_domination[df_domination.eq(False).all(axis=1)]
 
 
-def process_preferences(preferences, n_components, df, available_points, output, _input, i):
+def get_possible_preferences(dataset: MCDADataset, components, n_preferences, points) -> List[Tuple[str, str]]:
+    """
+    Get a list of possible preferences for the dataset.
+    Returns random preferences that are feasible for all components, all methods and all number of points.
+
+    Parameters
+    ----------
+    dataset (MCDADataset): Dataset to get preferences from.
+    components (List[int]): List of number of components for the methods.
+    n_preferences (int): Number of preferences to generate.
+    points (List[int]): List of number of points for the criteria.
+
+    Returns
+    -------
+    List[Tuple[str, str]]: List of possible preferences for the dataset.
+    """
+    preferences_list = []
+    tries = 0  # holds the number of tries to generate preferences (used for random state)
+    possible_pairs = get_domination_df(dataset, components).index.to_series()
+    while len(preferences_list) < CORES:
+        # preferences contains tuples (A, B) where A should be preferred to B
+        # - the number of tuples is equal to n_preferences
+        # - each preference is possible in every space and for every method
+        preferences = possible_pairs.sample(n_preferences, random_state=tries).tolist()
+        possible = True
+
+        # check if preferences are feasible for all components, all methods and all points
+        for n in components:
+            for method_name, method in get_methods(n).items():
+                for number_of_points in points:
+                    df_m = (
+                        pd.DataFrame(method.fit_transform(dataset.data), index=dataset.data.index, columns=range(n))
+                        .map(lambda x: f"{x:.4f}")
+                        .astype(np.float64)
+                    )
+                    criteria = [Criterion(name, points=number_of_points) for name in df_m.columns]
+                    status = check_uta_feasibility(df_m, preferences, criteria)
+                    if status != 1:
+                        possible = False
+                        break
+        if possible:
+            preferences_list.append(preferences)
+        tries += 1
+        print(f"current preferences: {len(preferences_list)},\ttries:\t{tries}")
+
+    return preferences_list
+
+
+def process_preferences(preferences, components, df, available_points, output, _input, i):
     results = defaultdict(dict)
-    for n in n_components:
+    for n in components:
+        print(f"i: {i}, n: {n}")
         methods = get_methods(n)
         for method_name, method in methods.items():
             for points in available_points:
-                print(f"{i=} {n=} {method_name=} {points=}")
                 try:
                     df_m = (
                         pd.DataFrame(method.fit_transform(df), index=df.index, columns=range(n))
@@ -149,21 +197,14 @@ if __name__ == "__main__":
     parser.add_argument("--input", type=Path, help="Path to the input file")
     parser.add_argument("--output_dir", type=Path, help="Path to the output directory")
     parser.add_argument("--n_preferences", type=int, default=1, help="Number of preferences to generate")
+    parser.add_argument("--components", type=int, nargs="+", default=[2, 3, 4, 5, 6], help="Number of components for the methods")
+    parser.add_argument("--points", type=int, nargs="+", default=[2, 4, 6], help="Number of points for the criteria")
     args = parser.parse_args()
 
     # Read the dataset
     dataset: MCDADataset = MCDADataset.read_csv(args.input)
 
-    # Define the number of components
-    available_points = [2, 5, 10]
-    # n_components = list(range(2, len(dataset.data.columns) // 2 + 2))
-    n_components = [2, 3, 4, 5, 6, 7]
-
-    # Define possible preferences
-    df_domination = get_domination_df(n_components, dataset)
-    preferences_list = [
-        df_domination.index.to_series().sample(args.n_preferences, random_state=i).tolist() for i in range(10)
-    ]
+    preferences_list = get_possible_preferences(dataset, args.components, args.n_preferences, args.points)
     print(preferences_list)
 
     # Calculate original dataset
@@ -183,7 +224,7 @@ if __name__ == "__main__":
     # Calculate for each method
     Parallel(n_jobs=-3)(
         delayed(process_preferences)(
-            preferences, n_components, dataset.data, available_points, args.output_dir, args.input, i
+            preferences, args.components, dataset.data, args.points, args.output_dir, args.input, i
         )
         for i, preferences in enumerate(preferences_list)
     )
@@ -192,8 +233,7 @@ if __name__ == "__main__":
     # Read data
     df_list = []
     for i in range(0, 10):
-        df_results = pd.read_csv(args.output_dir / Path(f"no_{i}.csv"), header=[0, 1],
-                                 index_col=[0, 1])
+        df_results = pd.read_csv(args.output_dir / Path(f"no_{i}.csv"), header=[0, 1], index_col=[0, 1])
         df_results.columns = pd.MultiIndex.from_tuples(
             [(method, int(dim.split(": ")[1])) for method, dim in df_results.columns],
             names=["method", "dim"],
