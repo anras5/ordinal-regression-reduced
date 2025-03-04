@@ -105,7 +105,7 @@ def get_domination_df(dataset: MCDADataset, n_components: List[int]) -> pd.DataF
 
 
 def get_possible_preferences(
-        dataset: MCDADataset, components, n_preferences, points, start_state=0, samples=SAMPLES
+    dataset: MCDADataset, components, n_preferences, points, start_state=0, samples=SAMPLES
 ) -> List[Tuple[str, str]]:
     """
     Get a list of possible preferences for the dataset.
@@ -161,18 +161,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, help="Path to the input file")
     parser.add_argument("--n_preferences", type=int, default=1, help="Number of preferences to generate")
-    parser.add_argument("--components", type=int, nargs="+", default=[2, 3, 4, 5, 6],
-                        help="Number of components for the methods")
-    parser.add_argument("--points", type=int, nargs="+", default=[2, 3, 4, 5, 6],
-                        help="Number of points for the criteria")
+    parser.add_argument(
+        "--components", type=int, nargs="+", default=[2, 3, 4, 5, 6], help="Number of components for the methods"
+    )
+    parser.add_argument(
+        "--points", type=int, nargs="+", default=[2, 3, 4, 5, 6], help="Number of points for the criteria"
+    )
     args = parser.parse_args()
 
     # Read the dataset
     dataset: MCDADataset = MCDADataset.read_csv(args.input)
 
     Parallel(n_jobs=-3)(
-        delayed(get_possible_preferences)(
-            dataset, args.components, args.n_preferences, args.points, SAMPLES * process
-        )
+        delayed(get_possible_preferences)(dataset, args.components, args.n_preferences, args.points, SAMPLES * process)
         for process in range(PROCESSES)
     )

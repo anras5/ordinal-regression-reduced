@@ -17,17 +17,9 @@ class AutoEncoder(nn.Module):
         """
         super(AutoEncoder, self).__init__()
         # Encoder: input -> hidden -> latent
-        self.encoder = nn.Sequential(
-            nn.Linear(input_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, latent_dim)
-        )
+        self.encoder = nn.Sequential(nn.Linear(input_dim, 128), nn.ReLU(), nn.Linear(128, latent_dim))
         # Decoder: latent -> hidden -> reconstruction of input
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, input_dim)
-        )
+        self.decoder = nn.Sequential(nn.Linear(latent_dim, 128), nn.ReLU(), nn.Linear(128, input_dim))
 
     def forward(self, x):
         z = self.encoder(x)
@@ -71,8 +63,18 @@ class DominanceAutoEncoder(BaseEstimator, TransformerMixin):
       - Compatibility with sklearn's Pipeline.
     """
 
-    def __init__(self, latent_dim=2, num_epochs=10, lambda_rank=1.0, margin=0.1,
-                 lr=1e-3, batch_size=32, random_state=None, device=None, verbose=False):
+    def __init__(
+        self,
+        latent_dim=2,
+        num_epochs=10,
+        lambda_rank=1.0,
+        margin=0.1,
+        lr=1e-3,
+        batch_size=32,
+        random_state=None,
+        device=None,
+        verbose=False,
+    ):
         self.latent_dim = latent_dim
         self.num_epochs = num_epochs
         self.lambda_rank = lambda_rank

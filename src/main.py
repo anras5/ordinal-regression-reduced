@@ -16,9 +16,11 @@ from sklearn.preprocessing import StandardScaler
 from mcda.dataset import MCDADataset
 from mcda.report import calculate_heuristics
 from mcda.uta import Criterion, check_uta_feasibility
+from methods.autoencoder import DominanceAutoEncoder
 from methods.mvu import MaximumVarianceUnfolding
 
 CORES = 10
+
 
 def get_methods(n: int) -> dict:
     """
@@ -41,6 +43,12 @@ def get_methods(n: int) -> dict:
         ),
         "Isomap": Pipeline([("scaler", StandardScaler()), ("isomap", Isomap(n_components=n))]),
         "MVU": Pipeline([("scaler", StandardScaler()), ("mvu", MaximumVarianceUnfolding(n_components=n, seed=42))]),
+        "DAE": Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("dae", DominanceAutoEncoder(latent_dim=n, num_epochs=1000, random_state=42, verbose=False)),
+            ]
+        ),
     }
 
 
@@ -159,14 +167,14 @@ def process_preferences(preferences, components, df, available_points, output, _
         print(f"i: {i}, n: {n}")
         methods = get_methods(n)
         for method_name, method in methods.items():
+            df_m = (
+                pd.DataFrame(method.fit_transform(df), index=df.index, columns=range(n))
+                .map(lambda x: f"{x:.4f}")
+                .astype(np.float64)
+            )
             for points in available_points:
+                criteria = [Criterion(name, points=points) for name in df_m.columns]
                 try:
-                    df_m = (
-                        pd.DataFrame(method.fit_transform(df), index=df.index, columns=range(n))
-                        .map(lambda x: f"{x:.4f}")
-                        .astype(np.float64)
-                    )
-                    criteria = [Criterion(name, points=points) for name in df_m.columns]
                     f_nec, f_era, f_pwi, f_rai = calculate_heuristics(df_m, preferences, criteria)
                     results[(method_name, f"dims: {n}")][(f"points: {points}", "f_nec")] = f_nec
                     results[(method_name, f"dims: {n}")][(f"points: {points}", "f_era")] = f_era
@@ -197,7 +205,9 @@ if __name__ == "__main__":
     parser.add_argument("--input", type=Path, help="Path to the input file")
     parser.add_argument("--output_dir", type=Path, help="Path to the output directory")
     parser.add_argument("--n_preferences", type=int, default=1, help="Number of preferences to generate")
-    parser.add_argument("--components", type=int, nargs="+", default=[2, 3, 4, 5, 6], help="Number of components for the methods")
+    parser.add_argument(
+        "--components", type=int, nargs="+", default=[2, 3, 4, 5, 6], help="Number of components for the methods"
+    )
     parser.add_argument("--points", type=int, nargs="+", default=[2, 4, 6], help="Number of points for the criteria")
     args = parser.parse_args()
 
