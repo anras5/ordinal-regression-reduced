@@ -38,9 +38,6 @@ def get_methods(n: int) -> dict:
     return {
         "PCA": Pipeline([("scaler", StandardScaler()), ("pca", PCA(n_components=n, random_state=42))]),
         "KernelPCA": Pipeline([("scaler", StandardScaler()), ("kpca", KernelPCA(n_components=n, random_state=42))]),
-        "LLE": Pipeline(
-            [("scaler", StandardScaler()), ("lle", LocallyLinearEmbedding(n_components=n, random_state=42))]
-        ),
         "Isomap": Pipeline([("scaler", StandardScaler()), ("isomap", Isomap(n_components=n))]),
         "MVU": Pipeline([("scaler", StandardScaler()), ("mvu", MaximumVarianceUnfolding(n_components=n, seed=42))]),
         "DAE": Pipeline(
@@ -149,7 +146,11 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
                         .astype(np.float64)
                     )
                     criteria = [Criterion(name, points=number_of_points) for name in df_m.columns]
-                    status = check_uta_feasibility(df_m, preferences, criteria)
+                    try:
+                        status = check_uta_feasibility(df_m, preferences, criteria)
+                    except:
+                        status = -1000
+                        print(f"failed for {n=} {method_name=} {number_of_points=}")
                     if status != 1:
                         possible = False
                         break
