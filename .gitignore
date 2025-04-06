@@ -164,3 +164,4 @@ cython_debug/
 .Trash*/
 *.lic
 output*/
+corr/
