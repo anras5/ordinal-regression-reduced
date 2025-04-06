@@ -10,9 +10,8 @@ def create_latex_table(input_file):
         for row in reader:
             rows.append(row)
 
-    # Skip rows with '2's
-    if all(cell == '2' for cell in rows[0][1:]):
-        rows.pop(0)  # Remove the first row
+    # Skip rows with number of characteristic points
+    rows.pop(0)  # Remove the first row
 
     # Get cost/gain indicators
     cost_gain_row = rows.pop(0)
