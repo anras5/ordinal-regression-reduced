@@ -1,10 +1,10 @@
 #!/usr/bin/bash
 
 DIR="insulating-materials"
-DATASET_FILENAME="dataset20.csv"
+DATASET_FILENAME="dataset30.csv"
 BASENAME="${DATASET_FILENAME%.*}"
 
-for N in {1..6}; do
+for N in {4..6}; do
   mkdir -p "./data/$DIR/output-$BASENAME/preferences_$N/plots/heatmap"
   mkdir -p "./data/$DIR/output-$BASENAME/preferences_$N/plots/lineplot"
   python3 main.py \

@@ -9,7 +9,7 @@ import pandas as pd
 import seaborn as sns
 from joblib import Parallel, delayed
 from sklearn.decomposition import PCA, KernelPCA
-from sklearn.manifold import Isomap, LocallyLinearEmbedding
+from sklearn.manifold import Isomap
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 

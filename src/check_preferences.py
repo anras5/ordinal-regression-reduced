@@ -15,8 +15,9 @@ from mcda.dataset import MCDADataset
 from mcda.uta import Criterion, check_uta_feasibility
 from methods.mvu import MaximumVarianceUnfolding
 
+# number of checked sets of preferences is PROCESSES * SAMPLES
 PROCESSES = 10
-SAMPLES = 100
+SAMPLES = 100  # number of sets of preferences to be checked by one process
 
 
 def get_methods(n: int) -> dict:
@@ -105,7 +106,7 @@ def get_domination_df(dataset: MCDADataset, n_components: List[int]) -> pd.DataF
 
 
 def get_possible_preferences(
-    dataset: MCDADataset, components, n_preferences, points, start_state=0, samples=SAMPLES
+        dataset: MCDADataset, components, n_preferences, points, start_state=0, samples=SAMPLES
 ) -> List[Tuple[str, str]]:
     """
     Get a list of possible preferences for the dataset.
