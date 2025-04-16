@@ -1,0 +1,26 @@
+digraph Experiment {
+    node [shape=box, style=filled, fontname="Helvetica"];
+
+    Dataset     [label="Dataset", fillcolor="#BCD8CA", shape=ellipse];
+    Method      [label="Dimensionality\nReduction Method", fillcolor="#BCD8CA", shape=ellipse];
+    Dim         [label="Target\nDimensionality", fillcolor="#BCD8CA", shape=ellipse];
+    Points      [label="Number of\nCharacteristic Points", fillcolor="#BCD8CA", shape=ellipse];
+    Preferences [label="Number of\nPreferences", fillcolor="#BCD8CA", shape=ellipse];
+
+    DimRed [label="Dimensionality Reduction of Dataset\nUsing Specified Method and Target Dimensionality", fillcolor="#76B29C", fontcolor="white"];
+    PrefSearch [label="Generate Preference Sets\nof Specified Size", fillcolor="#76B29C", fontcolor=white];
+    UTA     [label="Calculate ROR, ERA, SOR", fillcolor="#76B29C", fontcolor=white];
+    Metrics [label="Compute Robustness Metrics", fillcolor="#76B29C", fontcolor=white];
+
+    Output  [label="Output:\nRobustness Metrics", fillcolor="#E3ECE9", shape=ellipse];
+
+    Dataset -> DimRed;
+    Method -> DimRed;
+    Dim -> DimRed;
+    Points -> PrefSearch;
+    Preferences -> PrefSearch;
+    DimRed -> PrefSearch;
+    PrefSearch -> UTA;
+    UTA -> Metrics;
+    Metrics -> Output;
+}
