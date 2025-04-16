@@ -5,4 +5,5 @@ seaborn
 pandas
 numpy
 hasse-diagram
-umap-learn
+cvxpy
+torch

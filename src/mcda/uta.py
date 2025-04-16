@@ -175,6 +175,36 @@ def _get_uta_problem(
     return problem, decision_variables, epsilon
 
 
+def check_uta_feasibility(
+    df: pd.DataFrame,
+    preferences: List[Tuple[Union[str, int], Union[str, int]]],
+    criteria: List[Criterion],
+) -> int:
+    """
+    Check if the UTA problem is feasible.
+    Parameters
+    ----------
+    - df (pd.DataFrame): Performance table of the alternatives.
+    - preferences (List[Tuple[Union[str, int]]): Preferences of the user. Alternatives inside preferences have to exist in df.index.
+    - criteria (List[Criterion]): Data about criteria. Their names have to match columns in df.columns.
+
+    Returns
+    -------
+    - int: Status of the problem.
+    LpStatusNotSolved = 0
+    LpStatusOptimal = 1
+    LpStatusInfeasible = -1
+    LpStatusUnbounded = -2
+    LpStatusUndefined = -3
+    """
+    problem, decision_variables, epsilon = _get_uta_problem(df, preferences, criteria, "uta-gms", LpMaximize)
+    problem += epsilon
+    problem += epsilon >= 0
+    problem = round_problem(problem)
+    problem.solve(solver=GLPK(msg=False))
+    return problem.status
+
+
 def calculate_uta_gms(
     df: pd.DataFrame,
     preferences: List[Tuple[Union[str, int], Union[str, int]]],
@@ -186,7 +216,7 @@ def calculate_uta_gms(
     Parameters
     ----------
     - df (pd.DataFrame): Performance table of the alternatives.
-    - preferences (List[Tuple[Union[str, int]]): Preferences of the user. Alternatives inside preferences have to exist in df.index.
+    - preferences (List[Tuple[Union[str, int], Union[str, int]]]): Preferences of the user. Alternatives inside preferences have to exist in df.index.
     - criteria (List[Criterion]): Data about criteria. Their names have to match columns in df.columns.
 
     Returns
