@@ -104,7 +104,7 @@ def main():
     parser.add_argument('--max_cols', type=int, default=7,
                         help='Maximum number of columns per table row (default: 7)')
     parser.add_argument('--clipboard', '-c', action='store_true',
-                        help='Copy the LaTeX table to clipboard')
+                        help='Copy the LaTeX table to clipboard (works only on macOS)')
 
     args = parser.parse_args()
 
