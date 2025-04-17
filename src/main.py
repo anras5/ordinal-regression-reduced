@@ -3,10 +3,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import List, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from joblib import Parallel, delayed
 from sklearn.decomposition import PCA, KernelPCA
 from sklearn.manifold import Isomap
@@ -18,8 +16,9 @@ from mcda.report import calculate_heuristics
 from mcda.uta import Criterion, check_uta_feasibility
 from methods.autoencoder import DominanceAutoEncoder
 from methods.mvu import MaximumVarianceUnfolding
+from plotting import create_line_plots, create_heatmaps, read_results_data
 
-CORES = 10
+SETS_OF_PREFERENCES = 10
 
 
 def get_methods(n: int) -> dict:
@@ -129,7 +128,7 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
     preferences_list = []
     tries = 0  # holds the number of tries to generate preferences (used for random state)
     possible_pairs = get_domination_df(dataset, components).index.to_series()
-    while len(preferences_list) < CORES:
+    while len(preferences_list) < SETS_OF_PREFERENCES:
         # preferences contains tuples (A, B) where A should be preferred to B
         # - the number of tuples is equal to n_preferences
         # - each preference is possible in every space and for every method
@@ -162,7 +161,7 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
     return preferences_list
 
 
-def process_preferences(preferences, components, df, available_points, output, _input, i):
+def process_preferences(preferences, components, df, available_points, output, _input, metrics, i):
     results = defaultdict(dict)
     for n in components:
         print(f"i: {i}, n: {n}")
@@ -176,7 +175,15 @@ def process_preferences(preferences, components, df, available_points, output, _
             for points in available_points:
                 criteria = [Criterion(name, points=points) for name in df_m.columns]
                 try:
-                    f_nec, f_era, f_pwi, f_rai = calculate_heuristics(df_m, preferences, criteria)
+                    f_nec, f_era, f_pwi, f_rai = calculate_heuristics(
+                        df_m,
+                        preferences,
+                        criteria,
+                        nec="nec" in metrics,
+                        era="era" in metrics,
+                        pwi="pwi" in metrics,
+                        rai="rai" in metrics,
+                    )
                     results[(method_name, f"dims: {n}")][(f"points: {points}", "f_nec")] = f_nec
                     results[(method_name, f"dims: {n}")][(f"points: {points}", "f_era")] = f_era
                     results[(method_name, f"dims: {n}")][(f"points: {points}", "f_pwi")] = f_pwi
@@ -204,12 +211,23 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, help="Path to the input file")
-    parser.add_argument("--output_dir", type=Path, help="Path to the output directory")
+    parser.add_argument(
+        "--output_dir", type=Path, help="Path to the output directory (will contain csv files with results and plots)"
+    )
     parser.add_argument("--n_preferences", type=int, default=1, help="Number of preferences to generate")
     parser.add_argument(
         "--components", type=int, nargs="+", default=[2, 3, 4, 5, 6], help="Number of components for the methods"
     )
     parser.add_argument("--points", type=int, nargs="+", default=[2, 4, 6], help="Number of points for the criteria")
+    parser.add_argument("--cores", type=int, default=10, help="Number of cores to use for parallel processing")
+    parser.add_argument(
+        "--metrics",
+        type=str,
+        default=["nec", "era", "pwi", "rai"],
+        choices=["nec", "era", "pwi", "era"],
+        nargs="+",
+        help="Metrics to calculate",
+    )
     args = parser.parse_args()
 
     # Read the dataset
@@ -218,82 +236,17 @@ if __name__ == "__main__":
     preferences_list = get_possible_preferences(dataset, args.components, args.n_preferences, args.points)
     print(preferences_list)
 
-    # Calculate original dataset
-    # results_original = defaultdict(dict)
-    # for points in available_points:
-    #     print(f"points: {points}, method: original")
-    #     criteria = [Criterion(name, points=points) for name in dataset.data.columns]
-    #     f_nec, f_era, f_pwi, f_rai = calculate_heuristics(dataset.data, PREFERENCES, criteria, 1000)
-    #     results_original["original"][(f"points: {points}", "f_nec")] = f_nec
-    #     results_original["original"][(f"points: {points}", "f_era")] = f_era
-    #     results_original["original"][(f"points: {points}", "f_pwi")] = f_pwi
-    #     results_original["original"][(f"points: {points}", "f_rai")] = f_rai
-    # df_results_original = pd.DataFrame(results_original)
-    # print(df_results_original)
-    # df_results_original.to_csv(args.output)
-
     # Calculate for each method
-    Parallel(n_jobs=-3)(
+    Parallel(n_jobs=args.cores)(
         delayed(process_preferences)(
-            preferences, args.components, dataset.data, args.points, args.output_dir, args.input, i
+            preferences, args.components, dataset.data, args.points, args.output_dir, args.input, args.metrics, i
         )
         for i, preferences in enumerate(preferences_list)
     )
 
-    # Create plots for the results
-    # Read data
-    df_list = []
-    for i in range(0, 10):
-        df_results = pd.read_csv(args.output_dir / Path(f"no_{i}.csv"), header=[0, 1], index_col=[0, 1])
-        df_results.columns = pd.MultiIndex.from_tuples(
-            [(method, int(dim.split(": ")[1])) for method, dim in df_results.columns],
-            names=["method", "dim"],
-        )
-        df_results.index = pd.MultiIndex.from_tuples([(heu, int(p.split(": ")[1])) for p, heu in df_results.index])
-        df_list.append(df_results)
-    df_results = pd.concat(df_list)
-
-    # Line plots
-    unique_n_points = df_results.index.get_level_values(1).unique()
-    heuristics = df_results.index.get_level_values(0).unique()
+    # Plotting
+    df_results = read_results_data(args.output_dir)
+    metrics = [f"f_{metric}" for metric in args.metrics]
     methods = df_results.columns.get_level_values(0).unique()
-    X = "components"
-    COLOR = "points"
-    for method in methods:
-        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-        axes = axes.flatten()
-        for i, heuristic in enumerate(heuristics):
-            df_r = (
-                df_results[method]
-                .loc[heuristic]
-                .reset_index(names="points")
-                .melt(id_vars=["points"], var_name="components", value_name="value")
-            )
-            df_r.components = df_r.components.astype(np.float64)
-            sns.lineplot(x=X, y="value", hue=COLOR, data=df_r, ax=axes[i], palette="magma")
-            axes[i].set_xticks(df_r[X].unique())
-            axes[i].set_ylabel(heuristic)
-            handles, _ = axes[i].get_legend_handles_labels()
-            axes[i].legend(title=COLOR, handles=handles, loc="upper left", bbox_to_anchor=(1, 1), markerscale=5)
-        plt.suptitle(f"Mean heuristics for {method}, {args.n_preferences} preferences", fontsize=20)
-        plt.tight_layout()
-        plt.savefig(args.output_dir / f"plots/lineplot/{method}.png")
-        plt.clf()
-
-    # Heat maps
-    unique_n_points = df_results.index.get_level_values(1).unique()
-    heuristics = df_results.index.get_level_values(0).unique()
-    methods = df_results.columns.get_level_values(0).unique()
-    for method in methods:
-        fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-        axes = axes.flatten()
-        for i, heuristic in enumerate(heuristics):
-            df_r = df_results[method].loc[heuristic].reset_index(names="points").groupby("points").agg("mean")
-            sns.heatmap(df_r, ax=axes[i], annot=True, fmt=".2f", cmap="crest")
-            axes[i].set_title(heuristic, fontsize=14)
-            axes[i].set_ylabel("points", fontsize=10)
-            axes[i].set_xlabel("components", fontsize=10)
-        plt.suptitle(f"Mean heuristics for {method}, {args.n_preferences} preferences", fontsize=20)
-        plt.tight_layout()
-        plt.savefig(args.output_dir / f"plots/heatmap/{method}.png")
-        plt.clf()
+    create_line_plots(df_results, methods, metrics, args.n_preferences, args.output_dir)
+    create_heatmaps(df_results, methods, metrics, args.n_preferences, args.output_dir)
