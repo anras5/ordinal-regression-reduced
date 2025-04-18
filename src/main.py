@@ -137,13 +137,17 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
 
         # check if preferences are feasible for all components, all methods and all points
         for n in components:
+            if not possible:
+                break
             for method_name, method in get_methods(n).items():
+                if not possible:
+                    break
+                df_m = (
+                    pd.DataFrame(method.fit_transform(dataset.data), index=dataset.data.index, columns=range(n))
+                    .map(lambda x: f"{x:.4f}")
+                    .astype(np.float64)
+                )
                 for number_of_points in points:
-                    df_m = (
-                        pd.DataFrame(method.fit_transform(dataset.data), index=dataset.data.index, columns=range(n))
-                        .map(lambda x: f"{x:.4f}")
-                        .astype(np.float64)
-                    )
                     criteria = [Criterion(name, points=number_of_points) for name in df_m.columns]
                     try:
                         status = check_uta_feasibility(df_m, preferences, criteria)
@@ -224,7 +228,7 @@ if __name__ == "__main__":
         "--metrics",
         type=str,
         default=["nec", "era", "pwi", "rai"],
-        choices=["nec", "era", "pwi", "era"],
+        choices=["nec", "era", "pwi", "rai"],
         nargs="+",
         help="Metrics to calculate",
     )
