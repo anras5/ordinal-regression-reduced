@@ -6,7 +6,7 @@ DATASET_FILENAME="dataset.csv"  # filename of the dataset located in DIR (could 
 
 # script:
 BASENAME="${DATASET_FILENAME%.*}"
-for N in {1..2}; do
+for N in {1..6}; do
   mkdir -p "./data/$DIR/output-$BASENAME/preferences_$N/plots/heatmap"
   mkdir -p "./data/$DIR/output-$BASENAME/preferences_$N/plots/lineplot"
   python3 main.py \
