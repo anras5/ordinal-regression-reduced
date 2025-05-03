@@ -16,7 +16,13 @@ from mcda.report import calculate_heuristics
 from mcda.uta import Criterion, check_uta_feasibility
 from methods.autoencoder import DominanceAutoEncoder
 from methods.mvu import MaximumVarianceUnfolding
-from plotting import create_line_plots, create_heatmaps, read_results_data
+from plotting import (
+    create_heatmaps,
+    create_heatmaps_separate,
+    create_line_plots,
+    create_line_plots_separate,
+    read_results_data,
+)
 
 SETS_OF_PREFERENCES = 10
 
@@ -36,7 +42,9 @@ def get_methods(n: int) -> dict:
     """
     return {
         "PCA": Pipeline([("scaler", StandardScaler()), ("pca", PCA(n_components=n, random_state=42))]),
-        "KernelPCA": Pipeline([("scaler", StandardScaler()), ("kpca", KernelPCA(n_components=n, random_state=42, kernel="sigmoid"))]),
+        "KernelPCA": Pipeline(
+            [("scaler", StandardScaler()), ("kpca", KernelPCA(n_components=n, random_state=42, kernel="sigmoid"))]
+        ),
         "Isomap": Pipeline([("scaler", StandardScaler()), ("isomap", Isomap(n_components=n))]),
         "MVU": Pipeline([("scaler", StandardScaler()), ("mvu", MaximumVarianceUnfolding(n_components=n, seed=42))]),
         "DAE": Pipeline(
@@ -232,25 +240,43 @@ if __name__ == "__main__":
         nargs="+",
         help="Metrics to calculate",
     )
+    parser.add_argument(
+        "--skip_calculations",
+        action="store_true",
+        help="Skip calculations step",
+    )
+    parser.add_argument(
+        "--plots_type",
+        type=str,
+        default="separate",
+        choices=["separate", "combined"],
+        help="Type of plots to create",
+    )
     args = parser.parse_args()
 
     # Read the dataset
     dataset: MCDADataset = MCDADataset.read_csv(args.input)
 
-    preferences_list = get_possible_preferences(dataset, args.components, args.n_preferences, args.points)
-    print(preferences_list)
-
-    # Calculate for each method
-    Parallel(n_jobs=args.cores)(
-        delayed(process_preferences)(
-            preferences, args.components, dataset.data, args.points, args.output_dir, args.input, args.metrics, i
+    if not args.skip_calculations:
+        preferences_list = get_possible_preferences(dataset, args.components, args.n_preferences, args.points)
+        print(preferences_list)
+        # Calculate for each method
+        Parallel(n_jobs=args.cores)(
+            delayed(process_preferences)(
+                preferences, args.components, dataset.data, args.points, args.output_dir, args.input, args.metrics, i
+            )
+            for i, preferences in enumerate(preferences_list)
         )
-        for i, preferences in enumerate(preferences_list)
-    )
 
     # Plotting
     df_results = read_results_data(args.output_dir)
     metrics = [f"f_{metric}" for metric in args.metrics]
     methods = df_results.columns.get_level_values(0).unique()
-    create_line_plots(df_results, methods, metrics, args.n_preferences, args.output_dir)
-    create_heatmaps(df_results, methods, metrics, args.n_preferences, args.output_dir)
+    if args.plots_type == "combined":
+        print("Creating combined plots")
+        create_line_plots(df_results, methods, metrics, args.n_preferences, args.output_dir)
+        create_heatmaps(df_results, methods, metrics, args.n_preferences, args.output_dir)
+    else:
+        print("Creating separate plots")
+        create_line_plots_separate(df_results, methods, metrics, args.output_dir)
+        create_heatmaps_separate(df_results, methods, metrics, args.output_dir)

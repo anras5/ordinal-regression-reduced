@@ -109,6 +109,71 @@ def create_line_plots(df_results, methods, metrics, n_preferences, output_dir):
         plt.close(fig)
 
 
+def create_line_plots_separate(df_results, methods, metrics, output_dir):
+    """
+    Create separate line plots for each method, showing metrics vs components with different points as lines.
+
+    Parameters
+    ----------
+    df_results : pd.DataFrame
+        DataFrame containing the results data, indexed by metrics and points.
+    methods : List[str]
+        List of method names to create plots for.
+    metrics : List[str]
+        List of metric names to include in the plots.
+    output_dir : Path
+        Directory where the generated plots will be saved, followed by "plots/lineplot/".
+    """
+    sns.set_context("notebook")
+    for method in methods:
+        for heuristic in metrics:
+            if heuristic in df_results.index.get_level_values(0):
+                df_r = (
+                    df_results[method]
+                    .loc[heuristic]
+                    .reset_index(names="points")
+                    .melt(id_vars=["points"], var_name="components", value_name="value")
+                )
+                df_r.components = df_r.components.astype(np.float64)
+                sns.lineplot(x="components", y="value", hue="points", data=df_r, palette="magma")
+
+                plt.gca().set_xticks(df_r["components"].unique())
+                plt.gca().set_ylabel(heuristic)
+                plt.legend(title="points", loc="upper left", bbox_to_anchor=(1, 1), markerscale=5)
+                plt.tight_layout()
+                plt.savefig(output_dir / f"plots/lineplot/{method}_{heuristic}.png")
+                plt.close()
+
+
+def create_heatmaps_separate(df_results, methods, metrics, output_dir):
+    """
+    Create separate heatmaps for each method showing metrics as a function of points (y) and components (x).
+
+    Parameters
+    ----------
+    df_results : pd.DataFrame
+        Dataframe containing the results data
+    methods : List[str]
+        List of method names to create plots for
+    metrics : List[str]
+        List of metric names to include in the plots
+    output_dir : Path
+        Directory to save the plots to
+    """
+    sns.set_context("notebook")
+    for method in methods:
+        for heuristic in metrics:
+            if heuristic in df_results.index.get_level_values(0):
+                df_r = df_results[method].loc[heuristic].reset_index(names="points").groupby("points").agg("mean")
+                sns.heatmap(df_r, annot=True, fmt=".2f", cmap="crest")
+                plt.title(heuristic, fontsize=14)
+                plt.ylabel("points", fontsize=10)
+                plt.xlabel("components", fontsize=10)
+                plt.tight_layout()
+                plt.savefig(output_dir / f"plots/heatmap/{method}_{heuristic}.png")
+                plt.close()
+
+
 def create_heatmaps(df_results, methods, metrics, n_preferences, output_dir):
     """
     Create heatmaps for each method showing metrics as a function of points (y) and components (x).
