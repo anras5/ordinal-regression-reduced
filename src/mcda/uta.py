@@ -1,11 +1,10 @@
 from typing import Dict, List, Tuple, Union
 
-from .dataset import Criterion
-
 import numpy as np
 import pandas as pd
 from pulp import GLPK, LpMaximize, LpMinimize, LpProblem, LpVariable, lpSum
 
+from .dataset import Criterion
 from .rounding import round_problem
 
 NECESSARY = 1

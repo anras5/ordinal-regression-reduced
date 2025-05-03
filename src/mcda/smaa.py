@@ -1,6 +1,6 @@
 import subprocess
 from tempfile import TemporaryFile
-from typing import Dict, List, Tuple, Union, Any
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd

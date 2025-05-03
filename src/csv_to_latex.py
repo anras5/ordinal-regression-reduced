@@ -6,8 +6,8 @@ import subprocess
 
 def create_latex_table(input_file, max_cols=7):
     rows = []
-    with open(input_file, 'r') as file:
-        reader = csv.reader(file, delimiter=';')
+    with open(input_file, "r") as file:
+        reader = csv.reader(file, delimiter=";")
         for row in reader:
             rows.append(row)
 
@@ -60,9 +60,9 @@ def create_latex_table(input_file, max_cols=7):
         # Add column headers with g_i notation and arrows for cost/gain
         header_row = []
         for i in range(start_col, end_col):
-            if cost_gain_row[i].lower() == 'cost':
+            if cost_gain_row[i].lower() == "cost":
                 arrow = "$\\downarrow$"  # Downward arrow for cost
-            elif cost_gain_row[i].lower() == 'gain':
+            elif cost_gain_row[i].lower() == "gain":
                 arrow = "$\\uparrow$"  # Upward arrow for gain
             else:
                 arrow = ""
@@ -74,7 +74,6 @@ def create_latex_table(input_file, max_cols=7):
 
         # Add data rows for this section
         for row in rows:
-
             # Format numerical values in scientific notation
             formatted_row = [row[0]]  # First column (label)
             for i in range(start_col, end_col):
@@ -98,20 +97,20 @@ def create_latex_table(input_file, max_cols=7):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Convert CSV to LaTeX table')
-    parser.add_argument('input_file', help='Path to the input CSV file')
-    parser.add_argument('--output', '-o', help='Path to output LaTeX file (optional)')
-    parser.add_argument('--max_cols', type=int, default=7,
-                        help='Maximum number of columns per table row (default: 7)')
-    parser.add_argument('--clipboard', '-c', action='store_true',
-                        help='Copy the LaTeX table to clipboard (works only on macOS)')
+    parser = argparse.ArgumentParser(description="Convert CSV to LaTeX table")
+    parser.add_argument("input_file", help="Path to the input CSV file")
+    parser.add_argument("--output", "-o", help="Path to output LaTeX file (optional)")
+    parser.add_argument("--max_cols", type=int, default=7, help="Maximum number of columns per table row (default: 7)")
+    parser.add_argument(
+        "--clipboard", "-c", action="store_true", help="Copy the LaTeX table to clipboard (works only on macOS)"
+    )
 
     args = parser.parse_args()
 
     latex_table = create_latex_table(args.input_file, args.max_cols)
 
     if args.output:
-        with open(args.output, 'w') as out_file:
+        with open(args.output, "w") as out_file:
             out_file.write(latex_table)
         print(f"LaTeX table written to {args.output}")
 
