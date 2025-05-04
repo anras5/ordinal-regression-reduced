@@ -145,35 +145,6 @@ def create_line_plots_separate(df_results, methods, metrics, output_dir):
                 plt.close()
 
 
-def create_heatmaps_separate(df_results, methods, metrics, output_dir):
-    """
-    Create separate heatmaps for each method showing metrics as a function of points (y) and components (x).
-
-    Parameters
-    ----------
-    df_results : pd.DataFrame
-        Dataframe containing the results data
-    methods : List[str]
-        List of method names to create plots for
-    metrics : List[str]
-        List of metric names to include in the plots
-    output_dir : Path
-        Directory to save the plots to
-    """
-    sns.set_context("notebook")
-    for method in methods:
-        for heuristic in metrics:
-            if heuristic in df_results.index.get_level_values(0):
-                df_r = df_results[method].loc[heuristic].reset_index(names="points").groupby("points").agg("mean")
-                sns.heatmap(df_r, annot=True, fmt=".2f", cmap="crest")
-                plt.title(heuristic, fontsize=14)
-                plt.ylabel("points", fontsize=10)
-                plt.xlabel("components", fontsize=10)
-                plt.tight_layout()
-                plt.savefig(output_dir / f"plots/heatmap/{method}_{heuristic}.png")
-                plt.close()
-
-
 def create_heatmaps(df_results, methods, metrics, n_preferences, output_dir):
     """
     Create heatmaps for each method showing metrics as a function of points (y) and components (x).
@@ -210,3 +181,31 @@ def create_heatmaps(df_results, methods, metrics, n_preferences, output_dir):
         plt.tight_layout()
         plt.savefig(output_dir / f"plots/heatmap/{method}.png")
         plt.close(fig)
+
+
+def create_heatmaps_separate(df_results, methods, metrics_reverse_colormap, output_dir):
+    """
+    Create separate heatmaps for each method showing metrics as a function of points (y) and components (x).
+
+    Parameters
+    ----------
+    df_results : pd.DataFrame
+        Dataframe containing the results data
+    methods : List[str]
+        List of method names to create plots for
+    metrics : List[str]
+        List of metric names to include in the plots
+    output_dir : Path
+        Directory to save the plots to
+    """
+    sns.set_context("notebook")
+    for method in methods:
+        for heuristic, reverse_cmap in metrics_reverse_colormap.items():
+            if heuristic in df_results.index.get_level_values(0):
+                df_r = df_results[method].loc[heuristic].reset_index(names="points").groupby("points").agg("mean")
+                sns.heatmap(df_r, annot=True, fmt=".2f", cmap="crest_r" if reverse_cmap else "crest")
+                plt.ylabel("points", fontsize=10)
+                plt.xlabel("dimensions", fontsize=10)
+                plt.tight_layout()
+                plt.savefig(output_dir / f"plots/heatmap/{method}_{heuristic}.png")
+                plt.close()
