@@ -11,11 +11,13 @@ Output directories:
 └── src
     ...
     ├── data
-    │   ├── building                 # defines the dataset type
-    │   │   ├── dataset.csv          # defines the dataset (could be an original dataset or synethetic)
-    │   │   └── output               # output directory with results
-    │   │       └── preferences_1    # results for "one" preference
-    │   │           └── plots        # plots for the results (contains heatmap and lineplot)
+    │   ├── building                         # defines the dataset type
+    │   │   ├── dataset.csv                  # defines the dataset (could be an original dataset or synethetic)
+    │   │   ├── corr                         # directory with correlation matrix
+    │   │   │   └── dataset_correlation.png  # correlation matrix of the dataset
+    │   │   └── output-dataset               # output directory with results (for dataset.csv)
+    │   │       └── preferences_1            # results for "one" preference
+    │   │           └── plots                # plots for the results (contains heatmap and lineplot)
     │   ├── ceiling-structures
     ...
 ```
