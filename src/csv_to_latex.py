@@ -38,9 +38,6 @@ def create_latex_table(input_file, max_cols=7):
         num_table_rows = math.ceil(data_cols / max_cols)
         cols_per_row = math.ceil(data_cols / num_table_rows)
 
-    # Find the longest first column label for consistent width
-    max_label_width = max(len(row[0]) for row in rows if row)
-
     # Begin the overall table
     latex += "\\begin{tabular}{@{}c@{}}\n"
 
@@ -53,12 +50,30 @@ def create_latex_table(input_file, max_cols=7):
         current_row_cols = end_col - start_col
 
         # Begin the subtable with fixed widths
-        # Using p{} for fixed width columns
         latex += "\\begin{tabular}{|p{1cm}|" + ">{\\raggedleft\\arraybackslash}p{1.75cm}|" * current_row_cols + "}\n"
         latex += "\\hline\n"
 
+        # Find the smallest power of 10 for each column
+        min_exponents = {}
+        for col_idx in range(start_col, end_col):
+            exponents = []
+            for row in rows:
+                if row[col_idx].strip():  # Skip empty cells
+                    try:
+                        value = float(row[col_idx])
+                        # Extract exponent from scientific notation
+                        if value != 0:  # Avoid log(0)
+                            exp = int(math.floor(math.log10(abs(value))))
+                            exponents.append(exp)
+                    except ValueError:
+                        continue
+            if exponents:
+                min_exponents[col_idx] = min(exponents)
+            else:
+                min_exponents[col_idx] = 0
+
         # Add column headers with g_i notation and arrows for cost/gain
-        header_row = []
+        header_row = [""]  # First column is empty
         for i in range(start_col, end_col):
             if cost_gain_row[i].lower() == "cost":
                 arrow = "$\\downarrow$"  # Downward arrow for cost
@@ -69,15 +84,36 @@ def create_latex_table(input_file, max_cols=7):
 
             header_row.append(f"$g_{{{i}}}$ {arrow}")
 
-        latex += " & " + " & ".join(header_row) + " \\\\\n"
+        latex += " & ".join(header_row) + " \\\\\n"
         latex += "\\hline\n"
+
+        # Add exponent headers
+        exponent_row = [""]  # First column is empty
+        for i in range(start_col, end_col):
+            exp = min_exponents.get(i, 0)
+            if exp != 0:
+                exponent_row.append(f"$\\times 10^{{{exp}}}$")
+            else:
+                exponent_row.append(f" ")
+
+        latex += " & ".join(exponent_row) + " \\\\\n"
+        latex += f"\\hhline{'{' + '|='*len(exponent_row) + '|}'}\n"
+
 
         # Add data rows for this section
         for row in rows:
-            # Format numerical values in scientific notation
             formatted_row = [row[0]]  # First column (label)
             for i in range(start_col, end_col):
-                formatted_row.append(f"${float(row[i]):.2e}$")
+                if row[i].strip():  # Skip empty cells
+                    try:
+                        value = float(row[i])
+                        # Scale the value based on the minimum exponent
+                        scaled_value = value / (10 ** min_exponents[i])
+                        formatted_row.append(f"${scaled_value:.2f}$")
+                    except ValueError:
+                        formatted_row.append(row[i])
+                else:
+                    formatted_row.append("")
 
             latex += " & ".join(formatted_row) + " \\\\\n"
 
