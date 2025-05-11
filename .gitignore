@@ -165,5 +165,6 @@ cython_debug/
 *.lic
 output*/
 corr/
+dominations/
 .DS_Store
 _playground/
