@@ -4,6 +4,6 @@ scikit-learn==1.6.1
 seaborn==0.13.2
 pandas==2.2.3
 numpy==2.2.4
-hasse-diagram==1.1
+hasse-diagram==1.2
 cvxpy==1.6.4
 torch==2.6.0
