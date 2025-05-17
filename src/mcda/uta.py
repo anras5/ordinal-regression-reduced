@@ -12,7 +12,7 @@ BEST, WORST = "best", "worst"
 
 
 def _minus_handler(value: float) -> str:
-    return "_" + str(value)[1:] if value < 0 else value
+    return "_" + str(value)[1:] if str(value)[0] == "-" else value
 
 
 def _get_alternative_variables(
