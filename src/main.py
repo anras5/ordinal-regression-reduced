@@ -136,6 +136,18 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
     preferences_list = []
     tries = 0  # holds the number of tries to generate preferences (used for random state)
     possible_pairs = get_domination_df(dataset, components).index.to_series()
+
+    dataframes = []
+    for n in components:
+        # check for each method
+        for method_name, method in get_methods(n).items():
+            df_m = (
+                pd.DataFrame(method.fit_transform(dataset.data), index=dataset.data.index, columns=range(n))
+                .map(lambda x: f"{x:.4f}")
+                .astype(np.float64)
+            )
+            dataframes.append(df_m)
+
     while len(preferences_list) < SETS_OF_PREFERENCES:
         # preferences contains tuples (A, B) where A should be preferred to B
         # - the number of tuples is equal to n_preferences
@@ -143,28 +155,18 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
         preferences = possible_pairs.sample(n_preferences, random_state=tries).tolist()
         possible = True
 
-        # check if preferences are feasible for all components, all methods and all points
-        for n in components:
+        for df_m in dataframes:
             if not possible:
                 break
-            for method_name, method in get_methods(n).items():
-                if not possible:
+            for number_of_points in points:
+                criteria = [Criterion(name, points=number_of_points) for name in df_m.columns]
+                try:
+                    status = check_uta_feasibility(df_m, preferences, criteria)
+                except:
+                    status = -1000
+                if status != 1:
+                    possible = False
                     break
-                df_m = (
-                    pd.DataFrame(method.fit_transform(dataset.data), index=dataset.data.index, columns=range(n))
-                    .map(lambda x: f"{x:.4f}")
-                    .astype(np.float64)
-                )
-                for number_of_points in points:
-                    criteria = [Criterion(name, points=number_of_points) for name in df_m.columns]
-                    try:
-                        status = check_uta_feasibility(df_m, preferences, criteria)
-                    except:
-                        status = -1000
-                        print(f"failed for {n=} {method_name=} {number_of_points=}")
-                    if status != 1:
-                        possible = False
-                        break
         if possible:
             preferences_list.append(preferences)
         tries += 1
