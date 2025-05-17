@@ -139,6 +139,7 @@ def create_line_plots_separate(df_results, methods, metrics, output_dir):
 
                 plt.gca().set_xticks(df_r["components"].unique())
                 plt.gca().set_ylabel(heuristic)
+                plt.xlabel("dimensions")
                 plt.legend(title="points", loc="upper left", bbox_to_anchor=(1, 1), markerscale=5)
                 plt.tight_layout()
                 plt.savefig(output_dir / f"plots/lineplot/{method}_{heuristic}.png")
