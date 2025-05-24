@@ -1,11 +1,10 @@
 from typing import Dict, List, Tuple, Union
 
-from .dataset import Criterion
-
 import numpy as np
 import pandas as pd
 from pulp import GLPK, LpMaximize, LpMinimize, LpProblem, LpVariable, lpSum
 
+from .dataset import Criterion
 from .rounding import round_problem
 
 NECESSARY = 1
@@ -13,7 +12,7 @@ BEST, WORST = "best", "worst"
 
 
 def _minus_handler(value: float) -> str:
-    return "_" + str(value)[1:] if value < 0 else value
+    return "_" + str(value)[1:] if str(value)[0] == "-" else value
 
 
 def _get_alternative_variables(

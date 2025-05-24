@@ -106,7 +106,7 @@ def get_domination_df(dataset: MCDADataset, n_components: List[int]) -> pd.DataF
 
 
 def get_possible_preferences(
-        dataset: MCDADataset, components, n_preferences, points, start_state=0, samples=SAMPLES
+    dataset: MCDADataset, components, n_preferences, points, start_state=0, samples=SAMPLES
 ) -> List[Tuple[str, str]]:
     """
     Get a list of possible preferences for the dataset.

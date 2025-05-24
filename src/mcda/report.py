@@ -1,11 +1,11 @@
-from typing import List, Tuple, Union, Optional
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
-from .smaa import calculate_samples, SamplerException, calculate_pwi, calculate_rai
-from .uta import calculate_extreme_ranking, calculate_uta_gms
 from .dataset import Criterion
+from .smaa import SamplerException, calculate_pwi, calculate_rai, calculate_samples
+from .uta import calculate_extreme_ranking, calculate_uta_gms
 
 
 def calculate_heuristics(

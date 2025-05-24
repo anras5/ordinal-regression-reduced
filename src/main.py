@@ -16,7 +16,13 @@ from mcda.report import calculate_heuristics
 from mcda.uta import Criterion, check_uta_feasibility
 from methods.autoencoder import DominanceAutoEncoder
 from methods.mvu import MaximumVarianceUnfolding
-from plotting import create_line_plots, create_heatmaps, read_results_data
+from plotting import (
+    create_heatmaps,
+    create_heatmaps_separate,
+    create_line_plots,
+    create_line_plots_separate,
+    read_results_data,
+)
 
 SETS_OF_PREFERENCES = 10
 
@@ -36,7 +42,9 @@ def get_methods(n: int) -> dict:
     """
     return {
         "PCA": Pipeline([("scaler", StandardScaler()), ("pca", PCA(n_components=n, random_state=42))]),
-        "KernelPCA": Pipeline([("scaler", StandardScaler()), ("kpca", KernelPCA(n_components=n, random_state=42))]),
+        "KernelPCA": Pipeline(
+            [("scaler", StandardScaler()), ("kpca", KernelPCA(n_components=n, random_state=42, kernel="sigmoid"))]
+        ),
         "Isomap": Pipeline([("scaler", StandardScaler()), ("isomap", Isomap(n_components=n))]),
         "MVU": Pipeline([("scaler", StandardScaler()), ("mvu", MaximumVarianceUnfolding(n_components=n, seed=42))]),
         "DAE": Pipeline(
@@ -128,6 +136,18 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
     preferences_list = []
     tries = 0  # holds the number of tries to generate preferences (used for random state)
     possible_pairs = get_domination_df(dataset, components).index.to_series()
+
+    dataframes = []
+    for n in components:
+        # check for each method
+        for method_name, method in get_methods(n).items():
+            df_m = (
+                pd.DataFrame(method.fit_transform(dataset.data), index=dataset.data.index, columns=range(n))
+                .map(lambda x: f"{x:.4f}")
+                .astype(np.float64)
+            )
+            dataframes.append(df_m)
+
     while len(preferences_list) < SETS_OF_PREFERENCES:
         # preferences contains tuples (A, B) where A should be preferred to B
         # - the number of tuples is equal to n_preferences
@@ -135,28 +155,18 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
         preferences = possible_pairs.sample(n_preferences, random_state=tries).tolist()
         possible = True
 
-        # check if preferences are feasible for all components, all methods and all points
-        for n in components:
+        for df_m in dataframes:
             if not possible:
                 break
-            for method_name, method in get_methods(n).items():
-                if not possible:
+            for number_of_points in points:
+                criteria = [Criterion(name, points=number_of_points) for name in df_m.columns]
+                try:
+                    status = check_uta_feasibility(df_m, preferences, criteria)
+                except:
+                    status = -1000
+                if status != 1:
+                    possible = False
                     break
-                df_m = (
-                    pd.DataFrame(method.fit_transform(dataset.data), index=dataset.data.index, columns=range(n))
-                    .map(lambda x: f"{x:.4f}")
-                    .astype(np.float64)
-                )
-                for number_of_points in points:
-                    criteria = [Criterion(name, points=number_of_points) for name in df_m.columns]
-                    try:
-                        status = check_uta_feasibility(df_m, preferences, criteria)
-                    except:
-                        status = -1000
-                        print(f"failed for {n=} {method_name=} {number_of_points=}")
-                    if status != 1:
-                        possible = False
-                        break
         if possible:
             preferences_list.append(preferences)
         tries += 1
@@ -232,25 +242,42 @@ if __name__ == "__main__":
         nargs="+",
         help="Metrics to calculate",
     )
+    parser.add_argument(
+        "--skip_calculations",
+        action="store_true",
+        help="Skip calculations step",
+    )
+    parser.add_argument(
+        "--plots_type",
+        type=str,
+        default="separate",
+        choices=["separate", "combined"],
+        help="Type of plots to create",
+    )
     args = parser.parse_args()
 
     # Read the dataset
     dataset: MCDADataset = MCDADataset.read_csv(args.input)
 
-    preferences_list = get_possible_preferences(dataset, args.components, args.n_preferences, args.points)
-    print(preferences_list)
-
-    # Calculate for each method
-    Parallel(n_jobs=args.cores)(
-        delayed(process_preferences)(
-            preferences, args.components, dataset.data, args.points, args.output_dir, args.input, args.metrics, i
+    if not args.skip_calculations:
+        preferences_list = get_possible_preferences(dataset, args.components, args.n_preferences, args.points)
+        print(preferences_list)
+        # Calculate for each method
+        Parallel(n_jobs=args.cores)(
+            delayed(process_preferences)(
+                preferences, args.components, dataset.data, args.points, args.output_dir, args.input, args.metrics, i
+            )
+            for i, preferences in enumerate(preferences_list)
         )
-        for i, preferences in enumerate(preferences_list)
-    )
 
     # Plotting
     df_results = read_results_data(args.output_dir)
     metrics = [f"f_{metric}" for metric in args.metrics]
     methods = df_results.columns.get_level_values(0).unique()
-    create_line_plots(df_results, methods, metrics, args.n_preferences, args.output_dir)
-    create_heatmaps(df_results, methods, metrics, args.n_preferences, args.output_dir)
+    if args.plots_type == "combined":
+        create_line_plots(df_results, methods, metrics, args.n_preferences, args.output_dir)
+        create_heatmaps(df_results, methods, metrics, args.n_preferences, args.output_dir)
+    else:
+        create_line_plots_separate(df_results, methods, metrics, args.output_dir)
+        metrics_reverse_colormap = {f"f_{metric}": False if metric == "nec" else True for metric in args.metrics}
+        create_heatmaps_separate(df_results, methods, metrics_reverse_colormap, args.output_dir)

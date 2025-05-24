@@ -1,6 +1,7 @@
 import csv
 from dataclasses import dataclass
 from itertools import islice
+from os import PathLike
 from typing import List
 
 import pandas as pd
@@ -19,7 +20,7 @@ class MCDADataset:
         self.criteria = criteria
 
     @staticmethod
-    def read_csv(filepath: str, convert_to_gain: bool = True) -> (pd.DataFrame, List[Criterion]):
+    def read_csv(filepath: str | PathLike[str], convert_to_gain: bool = True) -> (pd.DataFrame, List[Criterion]):
         """
         Reads a csv file and converts it into a pandas dataframe (performances) and criteria list.
         """

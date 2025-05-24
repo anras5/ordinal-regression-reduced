@@ -11,11 +11,13 @@ Output directories:
 └── src
     ...
     ├── data
-    │   ├── building                 # defines the dataset type
-    │   │   ├── dataset.csv          # defines the dataset (could be an original dataset or synethetic)
-    │   │   └── output               # output directory with results
-    │   │       └── preferences_1    # results for "one" preference
-    │   │           └── plots        # plots for the results (contains heatmap and lineplot)
+    │   ├── building                         # defines the dataset type
+    │   │   ├── dataset.csv                  # defines the dataset (could be an original dataset or synethetic)
+    │   │   ├── corr                         # directory with correlation matrix
+    │   │   │   └── dataset_correlation.png  # correlation matrix of the dataset
+    │   │   └── output-dataset               # output directory with results (for dataset.csv)
+    │   │       └── preferences_1            # results for "one" preference
+    │   │           └── plots                # plots for the results (contains heatmap and lineplot)
     │   ├── ceiling-structures
     ...
 ```
@@ -27,3 +29,7 @@ Output directories:
 - `src/create_dataset.py`: Creates a synthetic dataset with a given number of alternatives.
 - `src/csv_to_latex.py`: Converts a CSV (with MCDADataset) file to a LaTeX table.
 - `src/main.py`: Main script for calculations - should be run with `run.sh`.
+
+## Notebooks
+
+- `src/notebooks/case-study.ipynb`: Code for the case study. (chapter 4 in the thesis)
