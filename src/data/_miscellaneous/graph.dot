@@ -7,14 +7,18 @@ digraph Experiment {
     Points      [label="Number of\nCharacteristic Points", fillcolor="#BCD8CA", shape=ellipse];
     Preferences [label="Number of\nPreferences", fillcolor="#BCD8CA", shape=ellipse];
 
-    DimRed [label="Dimensionality Reduction of Dataset\nUsing Specified Method and Target Dimensionality", fillcolor="#76B29C", fontcolor="white"];
+	Convert [label="Convert criteria to gain type", fillcolor="#76B29C", fontcolor="white"];
+	Standardize [label="Standardize data", fillcolor="#76B29C", fontcolor="white"];
+    DimRed [label="Reduce Dimensionality of Dataset", fillcolor="#76B29C", fontcolor="white"];
     PrefSearch [label="Generate Preference Sets\nof Specified Size", fillcolor="#76B29C", fontcolor=white];
     UTA     [label="Calculate ROR, ERA, SOR", fillcolor="#76B29C", fontcolor=white];
     Metrics [label="Compute Robustness Metrics", fillcolor="#76B29C", fontcolor=white];
 
     Output  [label="Output:\nRobustness Metrics", fillcolor="#E3ECE9", shape=ellipse];
 
-    Dataset -> DimRed;
+    Dataset -> Convert;
+	Convert -> Standardize;
+	Standardize -> DimRed;
     Method -> DimRed;
     Dim -> DimRed;
     Points -> PrefSearch;

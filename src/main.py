@@ -24,8 +24,6 @@ from plotting import (
     read_results_data,
 )
 
-SETS_OF_PREFERENCES = 10
-
 
 def get_methods(n: int) -> dict:
     """
@@ -117,7 +115,9 @@ def get_domination_df(dataset: MCDADataset, n_components: List[int]) -> pd.DataF
     return df_domination[df_domination.eq(False).all(axis=1)]
 
 
-def get_possible_preferences(dataset: MCDADataset, components, n_preferences, points) -> List[Tuple[str, str]]:
+def get_possible_preferences(
+    dataset: MCDADataset, components: List[int], n_preferences: int, sets_of_preferences: int, points: List[int]
+) -> List[Tuple[str, str]]:
     """
     Get a list of possible preferences for the dataset.
     Returns random preferences that are feasible for all components, all methods and all number of points.
@@ -126,7 +126,8 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
     ----------
     dataset (MCDADataset): Dataset to get preferences from.
     components (List[int]): List of number of components for the methods.
-    n_preferences (int): Number of preferences to generate.
+    n_preferences (int): Number of pairwise comparisons in a single preference set to generate.
+    sets_of_preferences (int): Number of preference sets to generate.
     points (List[int]): List of number of points for the criteria.
 
     Returns
@@ -148,7 +149,7 @@ def get_possible_preferences(dataset: MCDADataset, components, n_preferences, po
             )
             dataframes.append(df_m)
 
-    while len(preferences_list) < SETS_OF_PREFERENCES:
+    while len(preferences_list) < sets_of_preferences:
         # preferences contains tuples (A, B) where A should be preferred to B
         # - the number of tuples is equal to n_preferences
         # - each preference is possible in every space and for every method
@@ -228,7 +229,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_dir", type=Path, help="Path to the output directory (will contain csv files with results and plots)"
     )
-    parser.add_argument("--n_preferences", type=int, default=1, help="Number of preferences to generate")
+    parser.add_argument(
+        "--n_preferences",
+        type=int,
+        default=1,
+        help="Number of pairwise comparisons in a single set of preferences to generate",
+    )
+    parser.add_argument("--sets_of_preferences", type=int, default=10, help="Number of preference sets to generate")
     parser.add_argument(
         "--components", type=int, nargs="+", default=[2, 3, 4, 5, 6], help="Number of components for the methods"
     )
@@ -260,7 +267,9 @@ if __name__ == "__main__":
     dataset: MCDADataset = MCDADataset.read_csv(args.input)
 
     if not args.skip_calculations:
-        preferences_list = get_possible_preferences(dataset, args.components, args.n_preferences, args.points)
+        preferences_list = get_possible_preferences(
+            dataset, args.components, args.n_preferences, args.sets_of_preferences, args.points
+        )
         print(preferences_list)
         # Calculate for each method
         Parallel(n_jobs=args.cores)(
