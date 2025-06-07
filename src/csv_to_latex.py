@@ -4,7 +4,7 @@ import math
 import subprocess
 
 
-def create_latex_table(input_file, max_cols=7):
+def create_latex_table(input_file, max_cols=7, column_width=1.75):
     rows = []
     with open(input_file, "r") as file:
         reader = csv.reader(file, delimiter=";")
@@ -50,7 +50,7 @@ def create_latex_table(input_file, max_cols=7):
         current_row_cols = end_col - start_col
 
         # Begin the subtable with fixed widths
-        latex += "\\begin{tabular}{|p{1cm}|" + ">{\\raggedleft\\arraybackslash}p{1.75cm}|" * current_row_cols + "}\n"
+        latex += "\\begin{tabular}{|p{1cm}|" + (">{\\raggedleft\\arraybackslash}p{" + f"{column_width}cm}}|") * current_row_cols + "}\n"
         latex += "\\hline\n"
 
         # Find the smallest power of 10 for each column
@@ -99,10 +99,9 @@ def create_latex_table(input_file, max_cols=7):
         latex += " & ".join(exponent_row) + " \\\\\n"
         latex += f"\\hhline{'{' + '|='*len(exponent_row) + '|}'}\n"
 
-
         # Add data rows for this section
-        for row in rows:
-            formatted_row = [row[0]]  # First column (label)
+        for row_i, row in enumerate(rows, start=1):
+            formatted_row = [f"$a_{{{row_i}}}$"]  # First column (label)
             for i in range(start_col, end_col):
                 if row[i].strip():  # Skip empty cells
                     try:
@@ -137,13 +136,14 @@ def main():
     parser.add_argument("input_file", help="Path to the input CSV file")
     parser.add_argument("--output", "-o", help="Path to output LaTeX file (optional)")
     parser.add_argument("--max_cols", type=int, default=7, help="Maximum number of columns per table row (default: 7)")
+    parser.add_argument("--column_width", type=float, default=1.75, help="Width of each column in cm (default: 1.75)")
     parser.add_argument(
         "--clipboard", "-c", action="store_true", help="Copy the LaTeX table to clipboard (works only on macOS)"
     )
 
     args = parser.parse_args()
 
-    latex_table = create_latex_table(args.input_file, args.max_cols)
+    latex_table = create_latex_table(args.input_file, args.max_cols, args.column_width)
 
     if args.output:
         with open(args.output, "w") as out_file:
