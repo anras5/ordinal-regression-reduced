@@ -146,7 +146,7 @@ def create_line_plots_separate(df_results, methods, metrics, output_dir):
                 plt.close()
 
 
-def create_heatmaps(df_results, methods, metrics, n_preferences, output_dir):
+def create_heatmaps(df_results, methods, metrics_reverse_colormap, n_preferences, output_dir):
     """
     Create heatmaps for each method showing metrics as a function of points (y) and components (x).
 
@@ -163,7 +163,7 @@ def create_heatmaps(df_results, methods, metrics, n_preferences, output_dir):
     output_dir : Path
         Directory to save the plots to
     """
-    num_metrics = len(metrics)
+    num_metrics = len(metrics_reverse_colormap)
     num_rows, num_cols = get_subplot_layout(num_metrics)
 
     for method in methods:
@@ -171,14 +171,14 @@ def create_heatmaps(df_results, methods, metrics, n_preferences, output_dir):
         if num_metrics == 1:
             axes = np.array([axes])
         axes = axes.flatten()
-        for i, heuristic in enumerate(metrics):
+        for i, (heuristic, reverse_cmap) in enumerate(metrics_reverse_colormap.items()):
             if heuristic in df_results.index.get_level_values(0):
                 df_r = df_results[method].loc[heuristic].reset_index(names="points").groupby("points").agg("mean")
-                sns.heatmap(df_r, ax=axes[i], annot=True, fmt=".2f", cmap="crest")
+                sns.heatmap(df_r, ax=axes[i], annot=True, fmt=".2f", cmap="crest_r" if reverse_cmap else "crest")
                 axes[i].set_title(heuristic, fontsize=14)
                 axes[i].set_ylabel("points", fontsize=10)
-                axes[i].set_xlabel("components", fontsize=10)
-        plt.suptitle(f"Mean heuristics for {method}, {n_preferences} preferences", fontsize=10 + num_metrics * 2.5)
+                axes[i].set_xlabel("dimensions", fontsize=10)
+        # plt.suptitle(f"Mean heuristics for {method}, {n_preferences} preferences", fontsize=10 + num_metrics * 2.5)
         plt.tight_layout()
         plt.savefig(output_dir / f"plots/heatmap/{method}.png")
         plt.close(fig)

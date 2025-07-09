@@ -16,5 +16,5 @@ for N in {1..6}; do
     --components 2 3 4 5 6 \
     --points 2 3 4 5 6 \
     --skip_calculations \
-    --plots_type "separate"
+    --plots_type "combined"
 done

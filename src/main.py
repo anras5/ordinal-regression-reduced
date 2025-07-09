@@ -282,11 +282,11 @@ if __name__ == "__main__":
     # Plotting
     df_results = read_results_data(args.output_dir)
     metrics = [f"f_{metric}" for metric in args.metrics]
+    metrics_reverse_colormap = {f"f_{metric}": False if metric == "nec" else True for metric in args.metrics}
     methods = df_results.columns.get_level_values(0).unique()
     if args.plots_type == "combined":
         create_line_plots(df_results, methods, metrics, args.n_preferences, args.output_dir)
-        create_heatmaps(df_results, methods, metrics, args.n_preferences, args.output_dir)
+        create_heatmaps(df_results, methods, metrics_reverse_colormap, args.n_preferences, args.output_dir)
     else:
         create_line_plots_separate(df_results, methods, metrics, args.output_dir)
-        metrics_reverse_colormap = {f"f_{metric}": False if metric == "nec" else True for metric in args.metrics}
         create_heatmaps_separate(df_results, methods, metrics_reverse_colormap, args.output_dir)
